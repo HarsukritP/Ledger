@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from app.dependencies import get_current_user
 from app.models import DashboardBriefing, HealthMetrics, ForecastEvent, ActionItem, ActionResponse
+from app.services.demo_data import get_spending_summary, DEMO_TRANSACTIONS, DEMO_MEMORIES
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -54,3 +55,14 @@ async def get_health(user=Depends(get_current_user)):
 @router.post("/action/{action_id}")
 async def respond_to_action(action_id: str, body: ActionResponse, user=Depends(get_current_user)):
     return {"status": "ok", "action_id": action_id, "response": body.response}
+
+
+@router.get("/demo-summary")
+async def get_demo_summary():
+    """Get spending summary from demo data (no auth required for demo)."""
+    summary = get_spending_summary()
+    return {
+        **summary,
+        "transaction_sample": DEMO_TRANSACTIONS[:20],
+        "memories": DEMO_MEMORIES,
+    }
