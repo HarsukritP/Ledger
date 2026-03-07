@@ -59,11 +59,22 @@ async def get_current_user(authorization: str = Header(default="")):
             issuer=f"https://{settings.auth0_domain}/",
         )
 
-        return {
+        user_info = {
             "sub": payload.get("sub", ""),
             "email": payload.get("email", payload.get("sub", "")),
             "name": payload.get("name", payload.get("nickname", "")),
         }
+
+        from app.services.supabase_client import get_or_create_user
+        db_user = await get_or_create_user(
+            auth0_id=user_info["sub"],
+            email=user_info["email"],
+            name=user_info["name"],
+        )
+        if db_user:
+            user_info["db_id"] = db_user["id"]
+
+        return user_info
 
     except JWTError as e:
         raise HTTPException(status_code=401, detail=f"Token validation failed: {str(e)}")
