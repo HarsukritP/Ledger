@@ -1,7 +1,10 @@
+import logging
 import httpx
 from fastapi import Depends, HTTPException, Header
 from jose import jwt, JWTError
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 _jwks_cache: dict | None = None
 
@@ -21,6 +24,10 @@ async def _get_jwks() -> dict:
 async def get_current_user(authorization: str = Header(default="")):
     """Validate Auth0 JWT and return user claims."""
     if not settings.auth0_domain or not settings.auth0_client_id:
+        logger.error(
+            "AUTH0_DOMAIN or AUTH0_CLIENT_ID not set! "
+            "Returning demo user — this should NOT happen in production."
+        )
         return {
             "sub": "auth0|demo_user",
             "email": "harsukrit@ledger.dev",
