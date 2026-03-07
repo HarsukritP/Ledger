@@ -19,7 +19,7 @@ export function OnboardingPage() {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-base px-4">
       {/* Subtle background gradient */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#D4A85308_0%,_transparent_70%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,#D4A85308_0%,transparent_70%)]" />
 
       {/* Stepper */}
       <div className="relative mb-12 flex items-center gap-2">
@@ -74,7 +74,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         initial={{ opacity: 0, filter: "blur(10px)" }}
         animate={{ opacity: 1, filter: "blur(0px)" }}
         transition={{ duration: 0.6 }}
-        className="bg-gradient-to-r from-gold to-amber-300 bg-clip-text text-5xl font-bold tracking-tight text-transparent"
+        className="bg-linear-to-r from-gold to-amber-300 bg-clip-text text-5xl font-bold tracking-tight text-transparent"
       >
         Ledger
       </motion.h1>
