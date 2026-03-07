@@ -13,8 +13,11 @@ export function useAuthToken() {
       getAccessTokenSilently()
         .then((token) => {
           cachedToken = token;
+          console.log("[AUTH] token acquired, length:", token.length);
         })
-        .catch(() => {})
+        .catch((err) => {
+          console.error("[AUTH] FAILED to get token:", err);
+        })
         .finally(() => {
           fetching.current = false;
         });
@@ -25,6 +28,9 @@ export function useAuthToken() {
 }
 
 export function getToken(): string | null {
+  if (!cachedToken) {
+    console.warn("[AUTH] getToken called but no token cached yet");
+  }
   return cachedToken;
 }
 
