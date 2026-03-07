@@ -1,9 +1,14 @@
-import { getToken } from "../hooks/useAuthToken";
+import { getToken, waitForToken } from "../hooks/useAuthToken";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = getToken();
+  let token = getToken();
+  if (!token) {
+    console.log(`[API] waiting for auth token before ${path}...`);
+    token = await waitForToken();
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...((options?.headers as Record<string, string>) ?? {}),
@@ -12,10 +17,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers.Authorization = `Bearer ${token}`;
   }
 
+  console.log(`[API] ${options?.method || "GET"} ${path}`);
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   if (!res.ok) {
-    throw new Error(`API ${res.status}: ${res.statusText}`);
+    const body = await res.text().catch(() => "");
+    const msg = `API ${res.status}: ${body || res.statusText}`;
+    console.error(`[API] ${path} FAILED:`, msg);
+    throw new Error(msg);
   }
 
   return res.json();
