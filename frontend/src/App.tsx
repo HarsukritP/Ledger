@@ -6,11 +6,13 @@ import { SubscriptionsPage } from "./pages/SubscriptionsPage";
 import { GoalsPage } from "./pages/GoalsPage";
 import { ChatPage } from "./pages/ChatPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/forecast" element={<ForecastPage />} />
