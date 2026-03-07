@@ -58,11 +58,14 @@ async def get_current_user(authorization: str = Header(default="")):
         if not rsa_key:
             raise HTTPException(status_code=401, detail="Unable to find appropriate key")
 
+        expected_audience = settings.auth0_audience or settings.auth0_client_id
+        logger.info(f"[AUTH] validating JWT with audience={expected_audience}")
+
         payload = jwt.decode(
             token,
             rsa_key,
             algorithms=["RS256"],
-            audience=settings.auth0_client_id,
+            audience=expected_audience,
             issuer=f"https://{settings.auth0_domain}/",
         )
 
