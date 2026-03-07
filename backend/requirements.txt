@@ -4,3 +4,4 @@ pydantic
 python-jose[cryptography]
 httpx
 supabase
+backboard-sdk

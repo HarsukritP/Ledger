@@ -1,4 +1,4 @@
-"""Council orchestrator — routes to specialist agents, synthesizes outputs, manages action queue."""
+"""Council orchestrator — routes user messages via Backboard, synthesizes outputs, manages actions."""
 from app.agents.pulse import PulseAgent
 from app.agents.audit import AuditAgent
 from app.agents.north_star import NorthStarAgent
@@ -12,8 +12,8 @@ class Orchestrator:
         self.north_star = NorthStarAgent()
         self.sentinel = SentinelAgent()
 
-    async def run_all_agents(self, user_id: str, transactions: list) -> dict:
-        """Run all agents on new transaction data and merge outputs."""
+    async def run_all_agents(self, user_id: str, transactions: list | None = None) -> dict:
+        """Run all specialist agents and merge outputs into a prioritized action queue."""
         results = {
             "forecast": await self.pulse.analyze(user_id, transactions),
             "subscriptions": await self.audit.analyze(user_id, transactions),
@@ -24,30 +24,25 @@ class Orchestrator:
         return {"agent_results": results, "actions": actions}
 
     def _synthesize_actions(self, results: dict) -> list:
-        """Merge agent outputs into a prioritized action queue (max 5 items)."""
         actions = []
-        for source, items in results.items():
+        for items in results.values():
             if isinstance(items, list):
                 actions.extend(items)
         actions.sort(key=lambda a: a.get("priority", 0), reverse=True)
         return actions[:5]
 
-    async def route_chat(self, user_id: str, message: str) -> dict:
-        """Route a user chat message to the most relevant agent."""
-        lower = message.lower()
-        if any(w in lower for w in ["subscription", "cancel", "recurring", "paying for"]):
-            agent = "audit"
-        elif any(w in lower for w in ["goal", "save", "saving", "target", "afford"]):
-            agent = "north-star"
-        elif any(w in lower for w in ["spend", "unusual", "weird", "charge"]):
-            agent = "sentinel"
-        else:
-            agent = "pulse"
+    async def route_chat(self, user_sub: str, message: str, user_name: str = "") -> dict:
+        """Route a chat message through the Backboard Council for full agent orchestration."""
+        from app.services.backboard_service import backboard_service
 
-        return {
-            "agent": agent,
-            "response": f"[{agent}] would respond to: {message}",
-        }
+        if backboard_service.is_configured:
+            return await backboard_service.send_message(
+                user_sub=user_sub,
+                message=message,
+                user_name=user_name,
+            )
+
+        return backboard_service._fallback_response(message)
 
 
 orchestrator = Orchestrator()
