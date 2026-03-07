@@ -89,12 +89,18 @@ export const api = {
   plaid: {
     linkToken: () => request<any>("/plaid/link-token", { method: "POST" }),
     exchange: (publicToken: string) =>
-      request("/plaid/exchange", {
+      request<any>("/plaid/exchange", {
         method: "POST",
         body: JSON.stringify({ public_token: publicToken }),
       }),
-    sync: () => request("/plaid/sync", { method: "POST" }),
+    sync: () => request<any>("/plaid/sync", { method: "POST" }),
     accounts: () => request<any>("/plaid/accounts"),
+    transactions: (days = 30) => request<any>(`/plaid/transactions?days=${days}`),
+    sandboxToken: (institutionId = "ins_109508") =>
+      request<any>("/plaid/sandbox/create-token", {
+        method: "POST",
+        body: JSON.stringify({ institution_id: institutionId }),
+      }),
   },
 
   settings: {

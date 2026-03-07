@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Building2, DollarSign, MessageSquare, Users } from "lucide-react";
+import { ArrowRight, Building2, DollarSign, MessageSquare, Users, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { usePlaidLink } from "react-plaid-link";
 import { cn } from "../lib/utils";
+import { api } from "../lib/api";
 import { AGENTS, type AgentName } from "../types";
 
 const STEPS = ["Welcome", "Link Bank", "Profile", "Meet Your Team"] as const;
@@ -105,12 +107,59 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 }
 
 function LinkBankStep({ onNext }: { onNext: () => void }) {
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [exchanging, setExchanging] = useState(false);
   const [linked, setLinked] = useState(false);
+  const [linkedAccounts, setLinkedAccounts] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const simulateLink = () => {
-    setLinked(true);
-    setTimeout(onNext, 1500);
-  };
+  useEffect(() => {
+    api.plaid
+      .linkToken()
+      .then((data) => {
+        setLinkToken(data.link_token);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("[PLAID] Failed to get link token:", err);
+        setError("Could not initialize bank linking. You can skip for now.");
+        setLoading(false);
+      });
+  }, []);
+
+  const onSuccess = useCallback(
+    async (publicToken: string) => {
+      setExchanging(true);
+      setError(null);
+      try {
+        const result = await api.plaid.exchange(publicToken);
+        setLinkedAccounts(result.accounts || []);
+        setLinked(true);
+
+        api.plaid.sync().catch((err) =>
+          console.warn("[PLAID] Background sync failed:", err)
+        );
+
+        setTimeout(onNext, 2000);
+      } catch (err: any) {
+        console.error("[PLAID] Exchange failed:", err);
+        setError(err.message || "Failed to link account");
+        setExchanging(false);
+      }
+    },
+    [onNext]
+  );
+
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess,
+    onExit: (err) => {
+      if (err) {
+        console.warn("[PLAID] Link exited with error:", err);
+      }
+    },
+  });
 
   return (
     <div className="text-center">
@@ -122,22 +171,42 @@ function LinkBankStep({ onNext }: { onNext: () => void }) {
         So your team can get to work
       </p>
 
+      {error && (
+        <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-expense/20 bg-expense/5 px-4 py-2 text-xs text-expense">
+          <AlertTriangle size={14} />
+          {error}
+        </div>
+      )}
+
       {!linked ? (
         <div className="mt-8 space-y-3">
-          <button
-            onClick={simulateLink}
-            className="w-full rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-gold/30"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-raised text-sm font-bold text-gold">
-                FP
-              </div>
-              <div>
-                <p className="text-sm font-medium text-text-primary">First Platypus Bank</p>
-                <p className="text-xs text-text-muted">Sandbox • Connect with user_good / pass_good</p>
-              </div>
+          {loading || exchanging ? (
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-text-muted">
+              <Loader2 size={18} className="animate-spin" />
+              {exchanging ? "Linking your account..." : "Preparing secure connection..."}
             </div>
-          </button>
+          ) : (
+            <>
+              <button
+                onClick={() => open()}
+                disabled={!ready}
+                className="w-full rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-gold/30 disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-raised text-sm font-bold text-gold">
+                    <Building2 size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">Connect Your Bank</p>
+                    <p className="text-xs text-text-muted">Securely link via Plaid • 256-bit encryption</p>
+                  </div>
+                </div>
+              </button>
+              <p className="text-[10px] text-text-muted">
+                Sandbox mode — use credentials <span className="font-mono text-text-secondary">user_good</span> / <span className="font-mono text-text-secondary">pass_good</span>
+              </p>
+            </>
+          )}
           <button
             onClick={onNext}
             className="text-sm text-text-muted hover:text-text-secondary"
@@ -149,12 +218,23 @@ function LinkBankStep({ onNext }: { onNext: () => void }) {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mt-8 rounded-2xl border border-income/20 bg-income/5 p-4"
+          className="mt-8 space-y-2"
         >
-          <p className="text-sm font-medium text-income">Account linked!</p>
-          <p className="mt-1 text-xs text-text-secondary">
-            Checking • $2,847.32
-          </p>
+          <div className="rounded-2xl border border-income/20 bg-income/5 p-4">
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle2 size={18} className="text-income" />
+              <p className="text-sm font-medium text-income">Account linked!</p>
+            </div>
+            {linkedAccounts.length > 0 && (
+              <div className="mt-3 space-y-1">
+                {linkedAccounts.map((acct, i) => (
+                  <p key={i} className="text-xs text-text-secondary">
+                    {acct.name} • ${acct.balance_current?.toLocaleString() ?? "—"}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
         </motion.div>
       )}
     </div>
