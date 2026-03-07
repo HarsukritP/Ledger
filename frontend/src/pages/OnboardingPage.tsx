@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Building2, DollarSign, MessageSquare, Users } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -68,6 +69,9 @@ export function OnboardingPage() {
 }
 
 function WelcomeStep({ onNext }: { onNext: () => void }) {
+  const { user } = useAuth0();
+  const firstName = user?.given_name || user?.name?.split(" ")[0] || "there";
+
   return (
     <div className="text-center">
       <motion.h1
@@ -84,7 +88,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         transition={{ delay: 0.3 }}
         className="mt-4 text-lg text-text-secondary"
       >
-        Your personal finance team
+        Hey {firstName}, let's set up your finance team
       </motion.p>
       <motion.button
         initial={{ opacity: 0 }}
@@ -93,7 +97,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         onClick={onNext}
         className="group mt-8 inline-flex items-center gap-2 rounded-full bg-gold px-8 py-3 font-medium text-black transition-all hover:scale-105 hover:shadow-[0_0_30px_#D4A85340]"
       >
-        Get Started
+        Let's Go
         <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
       </motion.button>
     </div>

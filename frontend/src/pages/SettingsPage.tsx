@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link2, Shield, Bell, Info } from "lucide-react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { Link2, Shield, Bell, Info, LogOut } from "lucide-react";
 import { cn } from "../lib/utils";
 
 const TABS = [
@@ -13,6 +14,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]["id"];
 
 export function SettingsPage() {
+  const { logout, user } = useAuth0();
   const [tab, setTab] = useState<Tab>("accounts");
 
   return (
@@ -110,7 +112,18 @@ export function SettingsPage() {
         )}
 
         {tab === "about" && (
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {user && (
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-base p-3">
+                {user.picture && (
+                  <img src={user.picture} alt="" className="h-10 w-10 rounded-full" />
+                )}
+                <div>
+                  <p className="text-sm font-medium text-text-primary">{user.name}</p>
+                  <p className="text-xs text-text-muted">{user.email}</p>
+                </div>
+              </div>
+            )}
             <p className="text-sm text-text-secondary">
               <strong className="text-text-primary">Ledger</strong> v0.1.0
             </p>
@@ -122,6 +135,13 @@ export function SettingsPage() {
             <p className="text-xs text-text-muted">
               Built for Hack Canada 2026.
             </p>
+            <button
+              onClick={() => logout({ logoutParams: { returnTo: window.location.origin + "/welcome" } })}
+              className="flex items-center gap-2 rounded-full border border-danger/30 px-4 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger/10"
+            >
+              <LogOut size={14} />
+              Sign Out
+            </button>
           </div>
         )}
       </motion.div>

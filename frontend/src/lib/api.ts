@@ -1,15 +1,18 @@
+import { getToken } from "../hooks/useAuthToken";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      // Auth0 token will be added here once configured
-      Authorization: "Bearer demo_token",
-      ...options?.headers,
-    },
-    ...options,
-  });
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((options?.headers as Record<string, string>) ?? {}),
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   if (!res.ok) {
     throw new Error(`API ${res.status}: ${res.statusText}`);

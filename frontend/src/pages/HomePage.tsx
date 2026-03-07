@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useAuth0 } from "@auth0/auth0-react";
 import { MoneyText } from "../components/finance/MoneyText";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { ActionCard } from "../components/finance/ActionCard";
@@ -48,6 +49,9 @@ const MOCK_ACTIONS: ActionItem[] = [
 ];
 
 export function HomePage() {
+  const { user } = useAuth0();
+  const firstName = user?.given_name || user?.name?.split(" ")[0] || "there";
+
   return (
     <div className="space-y-8">
       {/* Greeting */}
@@ -56,7 +60,7 @@ export function HomePage() {
         animate={{ opacity: 1, y: 0 }}
       >
         <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-          {getGreeting()}, Harsukrit
+          {getGreeting()}, {firstName}
         </h1>
         <p className="text-sm text-text-muted">
           {new Date().toLocaleDateString("en-US", {
