@@ -23,9 +23,10 @@ logger = logging.getLogger("ledger.plaid")
 
 PLAID_ENVS = {
     "sandbox": plaid.Environment.Sandbox,
-    "development": plaid.Environment.Development,
     "production": plaid.Environment.Production,
 }
+if hasattr(plaid.Environment, "Development"):
+    PLAID_ENVS["development"] = plaid.Environment.Development
 
 
 class PlaidError(Exception):
