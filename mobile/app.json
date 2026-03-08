@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Ledger",
+    "slug": "ledger",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ledger",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ledger.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#09090B"
+      },
+      "package": "com.ledger.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "backgroundColor": "#09090B"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "react-native-auth0",
+        {
+          "domain": "REPLACE_WITH_YOUR_AUTH0_DOMAIN"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
