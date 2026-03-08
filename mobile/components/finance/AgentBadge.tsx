@@ -18,7 +18,7 @@ export function AgentBadge({ agent, className }: AgentBadgeProps) {
   return (
     <View
       className={`flex-row items-center gap-1.5 rounded-full px-2.5 py-1 ${className ?? ""}`}
-      style={{ backgroundColor: info.bgColor }}
+      style={{ backgroundColor: info.bgColor, borderWidth: 1, borderColor: `${info.color}30` }}
     >
       <View
         className="h-1.5 w-1.5 rounded-full"

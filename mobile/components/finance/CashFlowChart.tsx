@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { View, Text, useWindowDimensions } from "react-native";
 import Svg, { Path, Circle, Rect, Line, Text as SvgText } from "react-native-svg";
 import type { ForecastEvent } from "../../types";
+import { useTheme } from "../../lib/theme";
 
 interface CashFlowChartProps {
   historyEvents?: (ForecastEvent & { is_history?: boolean })[];
@@ -38,6 +39,7 @@ export function CashFlowChart({
   startBalance,
   dangerThreshold = 500,
 }: CashFlowChartProps) {
+  const { colors } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const width = screenWidth - 32;
   const height = 220;
@@ -56,9 +58,7 @@ export function CashFlowChart({
     const sortedHistory = hasHistory
       ? [...historyEvents].sort((a, b) => parseDate(a.date) - parseDate(b.date))
       : [];
-    const sortedForecast = [...effectiveForecast].sort(
-      (a, b) => parseDate(a.date) - parseDate(b.date)
-    );
+    const sortedForecast = [...effectiveForecast].sort((a, b) => parseDate(a.date) - parseDate(b.date));
 
     if (hasHistory && sortedHistory.length > 0) {
       let balance = startBalance;
@@ -90,14 +90,8 @@ export function CashFlowChart({
     const { niceMin, niceMax, ticks } = niceScale(rawMin * 0.95, rawMax * 1.05);
 
     return {
-      historyPoints: hPts,
-      forecastPoints: fPts,
-      minVal: niceMin,
-      maxVal: niceMax,
-      timeMin: tMin,
-      timeMax: tMax,
-      todayTs: now,
-      yTicks: ticks,
+      historyPoints: hPts, forecastPoints: fPts, minVal: niceMin, maxVal: niceMax,
+      timeMin: tMin, timeMax: tMax, todayTs: now, yTicks: ticks,
     };
   }, [historyEvents, effectiveForecast, startBalance, hasHistory]);
 
@@ -129,106 +123,80 @@ export function CashFlowChart({
     const step = (timeMax - timeMin) / count;
     return Array.from({ length: count + 1 }, (_, i) => {
       const ts = timeMin + step * i;
-      return {
-        ts,
-        label: new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        x: toX(ts),
-      };
+      return { ts, label: new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }), x: toX(ts) };
     });
   }, [timeMin, timeMax]);
 
   const visibleYTicks = yTicks.filter((_, i) => i % 2 === 0);
 
   return (
-    <View style={{ height, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "#27272A", backgroundColor: "#111114" }}>
+    <View style={{ height, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
       <Svg width={width} height={height}>
-        {/* Gridlines */}
         {yTicks.map((tick) => (
-          <Line
-            key={`g-${tick}`}
-            x1={padding.left} y1={toY(tick)}
-            x2={padding.left + chartW} y2={toY(tick)}
-            stroke="#27272A" strokeWidth={0.5} opacity={0.5}
-          />
+          <Line key={`g-${tick}`} x1={padding.left} y1={toY(tick)} x2={padding.left + chartW} y2={toY(tick)}
+            stroke={colors.border} strokeWidth={0.5} opacity={0.5} />
         ))}
 
-        {/* Danger zone */}
         {dangerThreshold > minVal && (
-          <Rect
-            x={padding.left} y={dangerY}
-            width={chartW} height={Math.max(0, toY(minVal) - dangerY)}
-            fill="#EF4444" opacity={0.06}
-          />
+          <Rect x={padding.left} y={dangerY} width={chartW} height={Math.max(0, toY(minVal) - dangerY)}
+            fill={colors.danger} opacity={0.06} />
         )}
 
-        {/* History area */}
         {historyPath ? (
           <Path
             d={`${historyPath} L ${toX(historyPoints[historyPoints.length - 1].ts)} ${toY(minVal)} L ${toX(historyPoints[0].ts)} ${toY(minVal)} Z`}
-            fill="#A1A1AA" opacity={0.06}
-          />
+            fill={colors.textMuted} opacity={0.06} />
         ) : null}
 
-        {/* Forecast area */}
-        {forecastAreaPath ? <Path d={forecastAreaPath} fill="#D4A853" opacity={0.08} /> : null}
+        {forecastAreaPath ? <Path d={forecastAreaPath} fill={colors.pulse} opacity={0.08} /> : null}
 
-        {/* History line (dashed) */}
         {historyPath ? (
-          <Path d={historyPath} fill="none" stroke="#71717A" strokeWidth={1.5} strokeDasharray="4,3" />
+          <Path d={historyPath} fill="none" stroke={colors.textMuted} strokeWidth={1.5} strokeDasharray="4,3" />
         ) : null}
 
-        {/* Forecast line */}
         {forecastPath ? (
-          <Path d={forecastPath} fill="none" stroke="#D4A853" strokeWidth={1.5} />
+          <Path d={forecastPath} fill="none" stroke={colors.pulse} strokeWidth={2} />
         ) : null}
 
-        {/* Today marker */}
         {hasHistory && (
           <>
-            <Line
-              x1={todayX} y1={padding.top}
-              x2={todayX} y2={padding.top + chartH}
-              stroke="#D4A853" strokeWidth={1} strokeDasharray="3,3" opacity={0.4}
-            />
-            <SvgText x={todayX} y={padding.top - 6} textAnchor="middle" fill="#D4A853" fontSize={9} fontWeight="500">
+            <Line x1={todayX} y1={padding.top} x2={todayX} y2={padding.top + chartH}
+              stroke={colors.pulse} strokeWidth={1} strokeDasharray="3,3" opacity={0.4} />
+            <SvgText x={todayX} y={padding.top - 6} textAnchor="middle" fill={colors.pulse} fontSize={9} fontWeight="500">
               Today
             </SvgText>
           </>
         )}
 
-        {/* Forecast dots */}
         {forecastPoints.map((p, i) => (
           <Circle key={`fd-${i}`} cx={toX(p.ts)} cy={toY(p.y)} r={2.5}
-            fill={p.y < dangerThreshold ? "#EF4444" : "#D4A853"} />
+            fill={p.y < dangerThreshold ? colors.danger : colors.pulse} />
         ))}
 
-        {/* Y labels */}
         {visibleYTicks.map((tick) => (
           <SvgText key={`y-${tick}`} x={padding.left - 4} y={toY(tick) + 4}
-            textAnchor="end" fill="#71717A" fontSize={9} fontFamily="monospace">
+            textAnchor="end" fill={colors.textMuted} fontSize={9} fontFamily="monospace">
             ${tick >= 1000 ? `${(tick / 1000).toFixed(1)}k` : tick}
           </SvgText>
         ))}
 
-        {/* X labels */}
         {xLabels.map((d, i) => (
           <SvgText key={`x-${i}`} x={d.x} y={padding.top + chartH + 16}
-            textAnchor="middle" fill="#71717A" fontSize={9}>
+            textAnchor="middle" fill={colors.textMuted} fontSize={9}>
             {d.label}
           </SvgText>
         ))}
       </Svg>
 
-      {/* Legend */}
       {hasHistory && (
         <View style={{ flexDirection: "row", justifyContent: "center", gap: 24, paddingBottom: 6, paddingTop: 2 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <View style={{ width: 16, height: 1, borderStyle: "dashed", borderWidth: 1, borderColor: "#71717A" }} />
-            <Text style={{ fontSize: 10, color: "#71717A" }}>Past</Text>
+            <View style={{ width: 16, height: 1, borderStyle: "dashed", borderWidth: 1, borderColor: colors.textMuted }} />
+            <Text style={{ fontSize: 10, color: colors.textMuted }}>Past</Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <View style={{ width: 16, height: 2, backgroundColor: "#D4A853" }} />
-            <Text style={{ fontSize: 10, color: "#71717A" }}>Projected</Text>
+            <View style={{ width: 16, height: 2, backgroundColor: colors.pulse }} />
+            <Text style={{ fontSize: 10, color: colors.textMuted }}>Projected</Text>
           </View>
         </View>
       )}

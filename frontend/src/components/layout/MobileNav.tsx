@@ -11,7 +11,7 @@ import { cn } from "../../lib/utils";
 
 const NAV_ITEMS = [
   { to: "/", icon: Home, label: "Home" },
-  { to: "/cashflow", icon: TrendingUp, label: "Cashflow" },
+  { to: "/cashflow", icon: TrendingUp, label: "Cash" },
   { to: "/expenses", icon: Receipt, label: "Expenses" },
   { to: "/goals", icon: Target, label: "Goals" },
   { to: "/chat", icon: MessageCircle, label: "Chat" },
@@ -20,8 +20,8 @@ const NAV_ITEMS = [
 
 export function MobileNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/90 backdrop-blur-md md:hidden">
-      <div className="flex items-center justify-around py-2">
+    <nav className="glass fixed inset-x-0 bottom-0 z-40 border-t border-border md:hidden">
+      <div className="flex items-center justify-around pb-[env(safe-area-inset-bottom)] pt-1">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -29,13 +29,20 @@ export function MobileNav() {
             end={item.to === "/"}
             className={({ isActive }) =>
               cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1 text-[10px]",
+                "relative flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] font-medium transition-colors",
                 isActive ? "text-gold" : "text-text-muted"
               )
             }
           >
-            <item.icon size={20} strokeWidth={1.5} />
-            <span>{item.label}</span>
+            {({ isActive }) => (
+              <>
+                <item.icon size={20} strokeWidth={1.5} />
+                <span>{item.label}</span>
+                {isActive && (
+                  <span className="absolute -bottom-0.5 h-0.5 w-4 rounded-full bg-gold" />
+                )}
+              </>
+            )}
           </NavLink>
         ))}
       </div>

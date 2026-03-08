@@ -13,6 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { AgentBadge } from "../../components/finance/AgentBadge";
 import { MoneyText } from "../../components/finance/MoneyText";
 import { api } from "../../lib/api";
+import { useTheme } from "../../lib/theme";
 
 interface Expense {
   id: string;
@@ -43,6 +44,7 @@ function getCategoryLabel(cat: string): string {
 }
 
 function ValueDots({ score }: { score: number }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: "row", gap: 3 }}>
       {Array.from({ length: 5 }).map((_, i) => (
@@ -54,8 +56,8 @@ function ValueDots({ score }: { score: number }) {
             borderRadius: 3,
             backgroundColor:
               i < score
-                ? score >= 4 ? "#34D399" : score >= 3 ? "#D4A853" : "#EF4444"
-                : "#27272A",
+                ? score >= 4 ? colors.income : score >= 3 ? colors.gold : colors.danger
+                : colors.border,
           }}
         />
       ))}
@@ -64,6 +66,7 @@ function ValueDots({ score }: { score: number }) {
 }
 
 export default function ExpensesScreen() {
+  const { colors } = useTheme();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,8 +135,8 @@ export default function ExpensesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-base items-center justify-center gap-3">
-        <ActivityIndicator size="large" color="#D4A853" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} className="items-center justify-center gap-3">
+        <ActivityIndicator size="large" color={colors.gold} />
         <Text className="text-sm text-text-muted">Scanning recurring charges...</Text>
       </SafeAreaView>
     );
@@ -141,11 +144,24 @@ export default function ExpensesScreen() {
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-base px-4 items-center justify-center">
-        <View className="rounded-2xl border border-danger/20 bg-danger/5 p-6 w-full items-center">
-          <Text className="text-sm text-danger text-center mb-3">{error}</Text>
-          <Pressable onPress={() => loadData()} className="rounded-full bg-gold px-5 py-2">
-            <Text className="text-xs font-medium text-black">Retry</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} className="px-4 items-center justify-center">
+        <View
+          style={{
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: colors.danger + "33",
+            backgroundColor: colors.danger + "0D",
+            padding: 24,
+            width: "100%",
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ fontSize: 14, color: colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text>
+          <Pressable
+            onPress={() => loadData()}
+            style={{ borderRadius: 999, backgroundColor: colors.gold, paddingHorizontal: 20, paddingVertical: 8 }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: "500", color: "#000" }}>Retry</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -178,12 +194,12 @@ export default function ExpensesScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-base">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, gap: 20 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => loadData(true)} tintColor="#D4A853" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => loadData(true)} tintColor={colors.gold} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -204,18 +220,18 @@ export default function ExpensesScreen() {
                   gap: 6,
                   borderRadius: 999,
                   borderWidth: 1,
-                  borderColor: "#27272A",
+                  borderColor: colors.border,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   opacity: scanning ? 0.5 : 1,
                 }}
               >
                 {scanning ? (
-                  <ActivityIndicator size={12} color="#A1A1AA" />
+                  <ActivityIndicator size={12} color={colors.textSecondary} />
                 ) : (
-                  <Feather name="search" size={12} color="#A1A1AA" />
+                  <Feather name="search" size={12} color={colors.textSecondary} />
                 )}
-                <Text style={{ fontSize: 12, color: "#A1A1AA", fontWeight: "500" }}>Scan Emails</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: "500" }}>Scan Emails</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -226,7 +242,7 @@ export default function ExpensesScreen() {
                   alignItems: "center",
                   gap: 6,
                   borderRadius: 999,
-                  backgroundColor: "#D4A853",
+                  backgroundColor: colors.gold,
                   paddingHorizontal: 14,
                   paddingVertical: 6,
                   opacity: linkingEmail ? 0.5 : 1,
@@ -240,8 +256,8 @@ export default function ExpensesScreen() {
 
           {emailAccounts.length > 0 && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-              <Feather name="mail" size={12} color="#60A5FA" />
-              <Text style={{ fontSize: 11, color: "#71717A" }}>
+              <Feather name="mail" size={12} color={colors.pulse} />
+              <Text style={{ fontSize: 11, color: colors.textMuted }}>
                 {emailAccounts.map((a: any) => a.email_address).join(", ")} linked
               </Text>
             </View>
@@ -250,15 +266,15 @@ export default function ExpensesScreen() {
 
         {/* Metrics */}
         <View className="flex-row gap-3">
-          <View className="flex-1 rounded-2xl border border-border bg-surface p-4">
+          <View style={{ flex: 1, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 16 }}>
             <Text className="text-xs text-text-muted mb-1">Monthly Total</Text>
             <MoneyText value={total} animated className="text-xl text-gold" />
           </View>
-          <View className="flex-1 rounded-2xl border border-border bg-surface p-4">
+          <View style={{ flex: 1, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 16 }}>
             <Text className="text-xs text-text-muted mb-1">Active</Text>
             <Text className="text-xl font-mono text-text-primary">{activeCount}</Text>
           </View>
-          <View className="flex-1 rounded-2xl border border-border bg-surface p-4">
+          <View style={{ flex: 1, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 16 }}>
             <Text className="text-xs text-text-muted mb-1">Savings</Text>
             <MoneyText value={potentialSavings} className="text-xl text-income" />
           </View>
@@ -275,16 +291,16 @@ export default function ExpensesScreen() {
                   borderRadius: 999,
                   paddingHorizontal: 16,
                   paddingVertical: 6,
-                  backgroundColor: filter === f ? "#D4A853" : "transparent",
+                  backgroundColor: filter === f ? colors.gold : "transparent",
                   borderWidth: filter === f ? 0 : 1,
-                  borderColor: "#27272A",
+                  borderColor: colors.border,
                 }}
               >
                 <Text
                   style={{
                     fontSize: 12,
                     fontWeight: "500",
-                    color: filter === f ? "#000" : "#A1A1AA",
+                    color: filter === f ? "#000" : colors.textSecondary,
                   }}
                 >
                   {f}
@@ -296,7 +312,7 @@ export default function ExpensesScreen() {
 
         {/* Grouped list */}
         {filtered.length === 0 ? (
-          <View className="rounded-2xl border border-border bg-surface p-8 items-center">
+          <View style={{ borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 32, alignItems: "center" }}>
             <Text className="text-sm text-text-muted text-center">
               {expenses.length === 0
                 ? "No recurring charges detected yet. Sync more transactions to see expenses."
@@ -320,12 +336,12 @@ export default function ExpensesScreen() {
                       fontWeight: "700",
                       letterSpacing: 1,
                       textTransform: "uppercase",
-                      color: "#71717A",
+                      color: colors.textMuted,
                     }}
                   >
                     {getCategoryLabel(category)}
                   </Text>
-                  <Text style={{ fontSize: 11, fontFamily: "monospace", color: "#71717A" }}>
+                  <Text style={{ fontSize: 11, fontFamily: "monospace", color: colors.textMuted }}>
                     ${items
                       .reduce((s, x) => s + x.amount, 0)
                       .toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -338,8 +354,8 @@ export default function ExpensesScreen() {
                     style={{
                       borderRadius: 16,
                       borderWidth: 1,
-                      borderColor: exp.status === "flagged" ? "#D4A85330" : "#27272A",
-                      backgroundColor: "#111114",
+                      borderColor: exp.status === "flagged" ? colors.gold + "30" : colors.border,
+                      backgroundColor: colors.surface,
                       overflow: "hidden",
                     }}
                   >
@@ -360,24 +376,24 @@ export default function ExpensesScreen() {
                             width: 32,
                             height: 32,
                             borderRadius: 8,
-                            backgroundColor: "#1A1A22",
+                            backgroundColor: colors.surfaceRaised,
                             alignItems: "center",
                             justifyContent: "center",
                           }}
                         >
-                          <Text style={{ fontSize: 12, fontWeight: "700", color: "#A1A1AA" }}>
+                          <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSecondary }}>
                             {exp.name.charAt(0)}
                           </Text>
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text
-                            style={{ fontSize: 14, fontWeight: "500", color: "#FAFAFA" }}
+                            style={{ fontSize: 14, fontWeight: "500", color: colors.textPrimary }}
                             numberOfLines={1}
                           >
                             {exp.name}
                           </Text>
                           {exp.usageEstimate && (
-                            <Text style={{ fontSize: 12, color: "#71717A" }} numberOfLines={1}>
+                            <Text style={{ fontSize: 12, color: colors.textMuted }} numberOfLines={1}>
                               {exp.usageEstimate}
                             </Text>
                           )}
@@ -389,7 +405,7 @@ export default function ExpensesScreen() {
                         <Feather
                           name={expandedId === exp.id ? "chevron-up" : "chevron-down"}
                           size={16}
-                          color="#71717A"
+                          color={colors.textMuted}
                         />
                       </View>
                     </Pressable>
@@ -398,7 +414,7 @@ export default function ExpensesScreen() {
                       <View
                         style={{
                           borderTopWidth: 1,
-                          borderTopColor: "#1F1F2B",
+                          borderTopColor: colors.borderSubtle,
                           padding: 16,
                           paddingTop: 12,
                           gap: 12,
@@ -406,9 +422,9 @@ export default function ExpensesScreen() {
                       >
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                           <AgentBadge agent="audit" />
-                          <Text style={{ fontSize: 12, color: "#71717A" }}>What Audit thinks</Text>
+                          <Text style={{ fontSize: 12, color: colors.textMuted }}>What Audit thinks</Text>
                         </View>
-                        <Text style={{ fontSize: 14, color: "#A1A1AA", lineHeight: 20 }}>
+                        <Text style={{ fontSize: 14, color: colors.textSecondary, lineHeight: 20 }}>
                           {exp.valueScore <= 2
                             ? `You're paying $${exp.amount}/mo for ${exp.name}. Consider cancelling to save $${(exp.amount * 12).toFixed(0)}/year.`
                             : `${exp.name} appears to be a regular charge at $${exp.amount}/mo. Seems worth keeping based on frequency.`}
@@ -418,7 +434,7 @@ export default function ExpensesScreen() {
                             onPress={() => handleDecision(exp.id, "keep")}
                             style={{
                               borderRadius: 999,
-                              backgroundColor: "#D4A853",
+                              backgroundColor: colors.gold,
                               paddingHorizontal: 16,
                               paddingVertical: 6,
                             }}
@@ -432,12 +448,12 @@ export default function ExpensesScreen() {
                             style={{
                               borderRadius: 999,
                               borderWidth: 1,
-                              borderColor: "#EF444430",
+                              borderColor: colors.danger + "30",
                               paddingHorizontal: 16,
                               paddingVertical: 6,
                             }}
                           >
-                            <Text style={{ fontSize: 12, fontWeight: "500", color: "#EF4444" }}>
+                            <Text style={{ fontSize: 12, fontWeight: "500", color: colors.danger }}>
                               Flag for Cancel
                             </Text>
                           </Pressable>

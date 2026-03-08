@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTheme } from "../../lib/theme";
 import {
   View,
   Text,
@@ -26,6 +27,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]["id"];
 
 export default function SettingsScreen() {
+  const { colors } = useTheme();
   const { clearSession, user } = useAuth0();
   const [tab, setTab] = useState<Tab>("accounts");
 
@@ -39,10 +41,10 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 }}>
-        <Text style={{ fontSize: 24, fontWeight: "700", color: "#FAFAFA", letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 24, fontWeight: "700", color: colors.textPrimary, letterSpacing: -0.5 }}>
           Settings
         </Text>
       </View>
@@ -68,13 +70,13 @@ export default function SettingsScreen() {
                 height: 34,
                 paddingHorizontal: 14,
                 borderRadius: 8,
-                backgroundColor: active ? "#D4A853" : "#111114",
+                backgroundColor: active ? colors.gold : colors.surface,
                 borderWidth: active ? 0 : 1,
-                borderColor: "#27272A",
+                borderColor: colors.border,
               }}
             >
-              <Feather name={t.icon} size={13} color={active ? "#000" : "#71717A"} />
-              <Text style={{ fontSize: 13, fontWeight: "600", color: active ? "#000" : "#71717A" }}>
+              <Feather name={t.icon} size={13} color={active ? "#000" : colors.textMuted} />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: active ? "#000" : colors.textMuted }}>
                 {t.label}
               </Text>
             </TouchableOpacity>
@@ -101,10 +103,11 @@ export default function SettingsScreen() {
 
 /* ─── Section header ──────────────────────────────────────────────── */
 function SectionHeader({ icon, label }: { icon: any; label: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 10 }}>
-      <Feather name={icon} size={13} color="#71717A" />
-      <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", color: "#71717A" }}>
+      <Feather name={icon} size={13} color={colors.textMuted} />
+      <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", color: colors.textMuted }}>
         {label}
       </Text>
     </View>
@@ -113,8 +116,9 @@ function SectionHeader({ icon, label }: { icon: any; label: string }) {
 
 /* ─── Card wrapper ────────────────────────────────────────────────── */
 function Card({ children, style }: { children: React.ReactNode; style?: any }) {
+  const { colors } = useTheme();
   return (
-    <View style={[{ backgroundColor: "#111114", borderRadius: 14, borderWidth: 1, borderColor: "#27272A", overflow: "hidden" }, style]}>
+    <View style={[{ backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }, style]}>
       {children}
     </View>
   );
@@ -123,7 +127,7 @@ function Card({ children, style }: { children: React.ReactNode; style?: any }) {
 /* ─── Row item inside a Card ──────────────────────────────────────── */
 function CardRow({
   icon,
-  iconColor = "#71717A",
+  iconColor,
   title,
   subtitle,
   right,
@@ -136,6 +140,8 @@ function CardRow({
   right?: React.ReactNode;
   last?: boolean;
 }) {
+  const { colors } = useTheme();
+  const resolvedIconColor = iconColor ?? colors.textMuted;
   return (
     <View
       style={{
@@ -144,7 +150,7 @@ function CardRow({
         paddingHorizontal: 14,
         paddingVertical: 13,
         borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: "#1F1F2B",
+        borderBottomColor: colors.borderSubtle,
       }}
     >
       <View
@@ -152,17 +158,17 @@ function CardRow({
           width: 30,
           height: 30,
           borderRadius: 8,
-          backgroundColor: "#1A1A22",
+          backgroundColor: colors.surfaceRaised,
           alignItems: "center",
           justifyContent: "center",
           marginRight: 12,
         }}
       >
-        <Feather name={icon} size={14} color={iconColor} />
+        <Feather name={icon} size={14} color={resolvedIconColor} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, color: "#FAFAFA", fontWeight: "500" }} numberOfLines={1}>{title}</Text>
-        {subtitle ? <Text style={{ fontSize: 12, color: "#71717A", marginTop: 1 }} numberOfLines={1}>{subtitle}</Text> : null}
+        <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: "500" }} numberOfLines={1}>{title}</Text>
+        {subtitle ? <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 1 }} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
       {right && <View style={{ marginLeft: 10 }}>{right}</View>}
     </View>
@@ -171,6 +177,7 @@ function CardRow({
 
 /* ─── Accounts tab ────────────────────────────────────────────────── */
 function AccountsTab() {
+  const { colors } = useTheme();
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,8 +217,8 @@ function AccountsTab() {
   if (loading) {
     return (
       <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 40, gap: 10 }}>
-        <ActivityIndicator size="small" color="#71717A" />
-        <Text style={{ fontSize: 13, color: "#71717A" }}>Loading accounts…</Text>
+        <ActivityIndicator size="small" color={colors.textMuted} />
+        <Text style={{ fontSize: 13, color: colors.textMuted }}>Loading accounts…</Text>
       </View>
     );
   }
@@ -228,7 +235,7 @@ function AccountsTab() {
                 <CardRow
                   key={i}
                   icon="credit-card"
-                  iconColor="#D4A853"
+                  iconColor={colors.gold}
                   title={`${acct.institution_name || "Bank"} — ${acct.name}`}
                   subtitle={`${acct.type} · $${acct.balance_current?.toLocaleString() ?? "—"}${acct.stale ? " (cached)" : ""}`}
                   last={i === bankAccounts.length - 1}
@@ -246,20 +253,20 @@ function AccountsTab() {
                 alignSelf: "flex-start",
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: "#27272A",
+                borderColor: colors.border,
                 paddingHorizontal: 14,
                 paddingVertical: 7,
                 opacity: refreshing ? 0.5 : 1,
               }}
             >
-              {refreshing ? <ActivityIndicator size={12} color="#71717A" /> : <Feather name="refresh-cw" size={12} color="#71717A" />}
-              <Text style={{ fontSize: 12, color: "#A1A1AA", fontWeight: "500" }}>Refresh</Text>
+              {refreshing ? <ActivityIndicator size={12} color={colors.textMuted} /> : <Feather name="refresh-cw" size={12} color={colors.textMuted} />}
+              <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: "500" }}>Refresh</Text>
             </TouchableOpacity>
           </>
         ) : (
           <Card>
             <View style={{ padding: 16 }}>
-              <Text style={{ fontSize: 13, color: "#71717A", lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 18 }}>
                 No bank accounts linked. Complete onboarding to connect your bank.
               </Text>
             </View>
@@ -277,16 +284,16 @@ function AccountsTab() {
                 <CardRow
                   key={acct.id}
                   icon="mail"
-                  iconColor="#60A5FA"
+                  iconColor={colors.pulse}
                   title={acct.email_address}
                   subtitle={`${acct.provider} · ${acct.last_scanned_at ? `Scanned ${new Date(acct.last_scanned_at).toLocaleDateString()}` : "Not scanned yet"}`}
                   last={i === emailAccounts.length - 1}
                   right={
                     <TouchableOpacity
                       onPress={() => handleUnlinkEmail(acct.id)}
-                      style={{ borderRadius: 999, borderWidth: 1, borderColor: "#EF444430", paddingHorizontal: 10, paddingVertical: 4 }}
+                      style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.danger + "30", paddingHorizontal: 10, paddingVertical: 4 }}
                     >
-                      <Text style={{ fontSize: 11, color: "#EF4444", fontWeight: "500" }}>Unlink</Text>
+                      <Text style={{ fontSize: 11, color: colors.danger, fontWeight: "500" }}>Unlink</Text>
                     </TouchableOpacity>
                   }
                 />
@@ -298,19 +305,19 @@ function AccountsTab() {
               style={{
                 flexDirection: "row", alignItems: "center", gap: 6,
                 marginTop: 10, alignSelf: "flex-start", borderRadius: 999,
-                borderWidth: 1, borderColor: "#27272A",
+                borderWidth: 1, borderColor: colors.border,
                 paddingHorizontal: 14, paddingVertical: 7,
                 opacity: scanning ? 0.5 : 1,
               }}
             >
-              {scanning ? <ActivityIndicator size={12} color="#71717A" /> : <Feather name="search" size={12} color="#71717A" />}
-              <Text style={{ fontSize: 12, color: "#A1A1AA", fontWeight: "500" }}>Scan for Receipts</Text>
+              {scanning ? <ActivityIndicator size={12} color={colors.textMuted} /> : <Feather name="search" size={12} color={colors.textMuted} />}
+              <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: "500" }}>Scan for Receipts</Text>
             </TouchableOpacity>
           </>
         ) : (
           <Card>
             <View style={{ padding: 16, gap: 12 }}>
-              <Text style={{ fontSize: 13, color: "#71717A", lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 18 }}>
                 Link your email to automatically detect subscriptions from billing receipts.
               </Text>
               <TouchableOpacity
@@ -318,7 +325,7 @@ function AccountsTab() {
                 disabled={linkingEmail}
                 style={{
                   flexDirection: "row", alignItems: "center", gap: 7,
-                  alignSelf: "flex-start", backgroundColor: "#D4A853",
+                  alignSelf: "flex-start", backgroundColor: colors.gold,
                   borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8,
                   opacity: linkingEmail ? 0.5 : 1,
                 }}
@@ -336,6 +343,7 @@ function AccountsTab() {
 
 /* ─── Preferences tab ─────────────────────────────────────────────── */
 function PreferencesTab() {
+  const { colors } = useTheme();
   const [prefs, setPrefs] = useState({
     briefing_frequency: "weekly",
     communication_style: "brief",
@@ -365,8 +373,8 @@ function PreferencesTab() {
   if (loading) {
     return (
       <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 40, gap: 10 }}>
-        <ActivityIndicator size="small" color="#71717A" />
-        <Text style={{ fontSize: 13, color: "#71717A" }}>Loading preferences…</Text>
+        <ActivityIndicator size="small" color={colors.textMuted} />
+        <Text style={{ fontSize: 13, color: colors.textMuted }}>Loading preferences…</Text>
       </View>
     );
   }
@@ -375,8 +383,8 @@ function PreferencesTab() {
     <View style={{ gap: 20 }}>
       {saving && (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <ActivityIndicator size={12} color="#D4A853" />
-          <Text style={{ fontSize: 11, color: "#D4A853" }}>Saving…</Text>
+          <ActivityIndicator size={12} color={colors.gold} />
+          <Text style={{ fontSize: 11, color: colors.gold }}>Saving…</Text>
         </View>
       )}
       <Card>
@@ -417,17 +425,18 @@ function SegmentRow({
   onChange: (v: string) => void;
   last?: boolean;
 }) {
+  const { colors } = useTheme();
   return (
     <View
       style={{
         paddingHorizontal: 14,
         paddingVertical: 12,
         borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: "#1F1F2B",
+        borderBottomColor: colors.borderSubtle,
         gap: 8,
       }}
     >
-      <Text style={{ fontSize: 13, color: "#A1A1AA", fontWeight: "500" }}>{label}</Text>
+      <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: "500" }}>{label}</Text>
       <View style={{ flexDirection: "row", gap: 6 }}>
         {options.map((opt) => {
           const active = value === opt;
@@ -441,12 +450,12 @@ function SegmentRow({
                 paddingHorizontal: 12,
                 borderRadius: 7,
                 justifyContent: "center",
-                backgroundColor: active ? "#D4A853" : "#1A1A22",
+                backgroundColor: active ? colors.gold : colors.surfaceRaised,
                 borderWidth: active ? 0 : 1,
-                borderColor: "#27272A",
+                borderColor: colors.border,
               }}
             >
-              <Text style={{ fontSize: 12, fontWeight: "600", color: active ? "#000" : "#71717A", textTransform: "capitalize" }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: active ? "#000" : colors.textMuted, textTransform: "capitalize" }}>
                 {opt}
               </Text>
             </TouchableOpacity>
@@ -459,6 +468,7 @@ function SegmentRow({
 
 /* ─── Sandbox tab ─────────────────────────────────────────────────── */
 function SandboxTab() {
+  const { colors } = useTheme();
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<any>(null);
 
@@ -480,12 +490,12 @@ function SandboxTab() {
       <Card>
         <View style={{ padding: 16, gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#D4A85318", alignItems: "center", justifyContent: "center" }}>
-              <Feather name="database" size={16} color="#D4A853" />
+            <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.gold + "18", alignItems: "center", justifyContent: "center" }}>
+              <Feather name="database" size={16} color={colors.gold} />
             </View>
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#FAFAFA" }}>Seed Demo Transactions</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textPrimary }}>Seed Demo Transactions</Text>
           </View>
-          <Text style={{ fontSize: 13, color: "#71717A", lineHeight: 19 }}>
+          <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 19 }}>
             Generate 8 weeks of realistic transaction data: biweekly paychecks, rent, subscriptions, dining, shopping, and more. Replaces any existing transactions and populates the dashboard, forecasts, and expense views.
           </Text>
           <TouchableOpacity
@@ -493,7 +503,7 @@ function SandboxTab() {
             disabled={seeding}
             style={{
               flexDirection: "row", alignItems: "center", gap: 8,
-              alignSelf: "flex-start", backgroundColor: "#D4A853",
+              alignSelf: "flex-start", backgroundColor: colors.gold,
               borderRadius: 999, paddingHorizontal: 18, paddingVertical: 9,
               opacity: seeding ? 0.6 : 1,
             }}
@@ -507,12 +517,12 @@ function SandboxTab() {
           {seedResult && (
             <View style={{
               borderRadius: 10, borderWidth: 1,
-              borderColor: seedResult.error ? "#EF444430" : "#34D39930",
-              backgroundColor: seedResult.error ? "#EF444408" : "#34D39908",
+              borderColor: seedResult.error ? colors.danger + "30" : colors.income + "30",
+              backgroundColor: seedResult.error ? colors.danger + "08" : colors.income + "08",
               padding: 12, flexDirection: "row", alignItems: "center", gap: 8,
             }}>
-              <Feather name={seedResult.error ? "x-circle" : "check-circle"} size={14} color={seedResult.error ? "#EF4444" : "#34D399"} />
-              <Text style={{ fontSize: 12, color: seedResult.error ? "#EF4444" : "#A1A1AA", flex: 1 }}>
+              <Feather name={seedResult.error ? "x-circle" : "check-circle"} size={14} color={seedResult.error ? colors.danger : colors.income} />
+              <Text style={{ fontSize: 12, color: seedResult.error ? colors.danger : colors.textSecondary, flex: 1 }}>
                 {seedResult.error
                   ? seedResult.error
                   : `Created ${seedResult.transactions_created} transactions and ${seedResult.recurring_charges_created} recurring charges`}
@@ -527,6 +537,7 @@ function SandboxTab() {
 
 /* ─── Privacy tab ─────────────────────────────────────────────────── */
 function PrivacyTab() {
+  const { colors } = useTheme();
   const { clearSession } = useAuth0();
   const [memories, setMemories] = useState<any[]>([]);
   const [memoriesLoading, setMemoriesLoading] = useState(true);
@@ -580,7 +591,7 @@ function PrivacyTab() {
         <Card>
           {memoriesLoading ? (
             <View style={{ padding: 20, alignItems: "center" }}>
-              <ActivityIndicator size="small" color="#71717A" />
+              <ActivityIndicator size="small" color={colors.textMuted} />
             </View>
           ) : memories.length > 0 ? (
             memories.map((memory, i) => (
@@ -590,24 +601,24 @@ function PrivacyTab() {
                   flexDirection: "row", alignItems: "center",
                   paddingHorizontal: 14, paddingVertical: 12,
                   borderBottomWidth: i === memories.length - 1 ? 0 : 1,
-                  borderBottomColor: "#1F1F2B",
+                  borderBottomColor: colors.borderSubtle,
                   gap: 10,
                 }}
               >
-                <Text style={{ fontSize: 13, color: "#A1A1AA", flex: 1, lineHeight: 18 }} numberOfLines={3}>
+                <Text style={{ fontSize: 13, color: colors.textSecondary, flex: 1, lineHeight: 18 }} numberOfLines={3}>
                   {memory.content || memory.text || String(memory)}
                 </Text>
                 <TouchableOpacity
                   onPress={() => handleForgetMemory(memory.id)}
-                  style={{ borderRadius: 999, borderWidth: 1, borderColor: "#EF444430", paddingHorizontal: 10, paddingVertical: 4 }}
+                  style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.danger + "30", paddingHorizontal: 10, paddingVertical: 4 }}
                 >
-                  <Text style={{ fontSize: 11, color: "#EF4444", fontWeight: "500" }}>Forget</Text>
+                  <Text style={{ fontSize: 11, color: colors.danger, fontWeight: "500" }}>Forget</Text>
                 </TouchableOpacity>
               </View>
             ))
           ) : (
             <View style={{ padding: 16 }}>
-              <Text style={{ fontSize: 13, color: "#71717A", lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 18 }}>
                 No memories stored yet. Ledger will learn from your activity over time.
               </Text>
             </View>
@@ -620,7 +631,7 @@ function PrivacyTab() {
         <SectionHeader icon="hard-drive" label="Your Data" />
         <Card>
           <View style={{ padding: 16, gap: 12 }}>
-            <Text style={{ fontSize: 13, color: "#71717A", lineHeight: 18 }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 18 }}>
               Ledger stores your transaction data, goals, and preferences. Export or permanently delete everything below.
             </Text>
             <TouchableOpacity
@@ -629,13 +640,13 @@ function PrivacyTab() {
               style={{
                 flexDirection: "row", alignItems: "center", gap: 7,
                 alignSelf: "flex-start", borderRadius: 999,
-                borderWidth: 1, borderColor: "#27272A",
+                borderWidth: 1, borderColor: colors.border,
                 paddingHorizontal: 14, paddingVertical: 8,
                 opacity: exporting ? 0.5 : 1,
               }}
             >
-              {exporting ? <ActivityIndicator size={13} color="#71717A" /> : <Feather name="download" size={13} color="#71717A" />}
-              <Text style={{ fontSize: 13, color: "#A1A1AA", fontWeight: "500" }}>Export My Data</Text>
+              {exporting ? <ActivityIndicator size={13} color={colors.textMuted} /> : <Feather name="download" size={13} color={colors.textMuted} />}
+              <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: "500" }}>Export My Data</Text>
             </TouchableOpacity>
 
             {!confirmDelete ? (
@@ -644,23 +655,23 @@ function PrivacyTab() {
                 style={{
                   flexDirection: "row", alignItems: "center", gap: 7,
                   alignSelf: "flex-start", borderRadius: 999,
-                  borderWidth: 1, borderColor: "#EF444430",
+                  borderWidth: 1, borderColor: colors.danger + "30",
                   paddingHorizontal: 14, paddingVertical: 8,
                 }}
               >
-                <Feather name="trash-2" size={13} color="#EF4444" />
-                <Text style={{ fontSize: 13, color: "#EF4444", fontWeight: "500" }}>Delete My Account</Text>
+                <Feather name="trash-2" size={13} color={colors.danger} />
+                <Text style={{ fontSize: 13, color: colors.danger, fontWeight: "500" }}>Delete My Account</Text>
               </TouchableOpacity>
             ) : (
-              <View style={{ borderRadius: 10, borderWidth: 1, borderColor: "#EF444430", backgroundColor: "#EF444408", padding: 12, gap: 10 }}>
-                <Text style={{ fontSize: 13, color: "#EF4444", fontWeight: "500" }}>
+              <View style={{ borderRadius: 10, borderWidth: 1, borderColor: colors.danger + "30", backgroundColor: colors.danger + "08", padding: 12, gap: 10 }}>
+                <Text style={{ fontSize: 13, color: colors.danger, fontWeight: "500" }}>
                   This permanently deletes all your data. Are you sure?
                 </Text>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   <TouchableOpacity
                     onPress={handleDelete}
                     disabled={deleting}
-                    style={{ borderRadius: 999, backgroundColor: "#EF4444", paddingHorizontal: 16, paddingVertical: 8, opacity: deleting ? 0.6 : 1 }}
+                    style={{ borderRadius: 999, backgroundColor: colors.danger, paddingHorizontal: 16, paddingVertical: 8, opacity: deleting ? 0.6 : 1 }}
                   >
                     <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>
                       {deleting ? "Deleting…" : "Yes, Delete All"}
@@ -668,9 +679,9 @@ function PrivacyTab() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setConfirmDelete(false)}
-                    style={{ borderRadius: 999, borderWidth: 1, borderColor: "#27272A", paddingHorizontal: 14, paddingVertical: 8 }}
+                    style={{ borderRadius: 999, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 8 }}
                   >
-                    <Text style={{ fontSize: 13, color: "#71717A", fontWeight: "500" }}>Cancel</Text>
+                    <Text style={{ fontSize: 13, color: colors.textMuted, fontWeight: "500" }}>Cancel</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -754,6 +765,7 @@ function NotificationsSection() {
 
 /* ─── About tab ───────────────────────────────────────────────────── */
 function AboutTab({ user, onSignOut }: { user: any; onSignOut: () => void }) {
+  const { colors } = useTheme();
   return (
     <View style={{ gap: 16 }}>
       <NotificationsSection />
@@ -764,13 +776,13 @@ function AboutTab({ user, onSignOut }: { user: any; onSignOut: () => void }) {
             {user.picture ? (
               <Image source={{ uri: user.picture }} style={{ width: 44, height: 44, borderRadius: 22 }} />
             ) : (
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#1A1A22", alignItems: "center", justifyContent: "center" }}>
-                <Feather name="user" size={20} color="#71717A" />
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center" }}>
+                <Feather name="user" size={20} color={colors.textMuted} />
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#FAFAFA" }}>{user.name}</Text>
-              <Text style={{ fontSize: 13, color: "#71717A", marginTop: 1 }}>{user.email}</Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textPrimary }}>{user.name}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 1 }}>{user.email}</Text>
             </View>
           </View>
         </Card>
@@ -778,14 +790,14 @@ function AboutTab({ user, onSignOut }: { user: any; onSignOut: () => void }) {
 
       <Card>
         <View style={{ padding: 14, gap: 8 }}>
-          <Text style={{ fontSize: 14, color: "#FAFAFA" }}>
+          <Text style={{ fontSize: 14, color: colors.textPrimary }}>
             <Text style={{ fontWeight: "700" }}>Ledger</Text>
-            <Text style={{ color: "#71717A" }}> v0.1.0</Text>
+            <Text style={{ color: colors.textMuted }}> v0.1.0</Text>
           </Text>
-          <Text style={{ fontSize: 12, color: "#71717A", lineHeight: 18 }}>
+          <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 18 }}>
             Ledger provides educational financial guidance, not regulated financial advice. Ledger does not execute trades, call banks, or impersonate financial advisors. All recommendations are preference-based and require user confirmation.
           </Text>
-          <Text style={{ fontSize: 11, color: "#52525B" }}>Built for Hack Canada 2026.</Text>
+          <Text style={{ fontSize: 11, color: colors.textMuted }}>Built for Hack Canada 2026.</Text>
         </View>
       </Card>
 
@@ -793,13 +805,13 @@ function AboutTab({ user, onSignOut }: { user: any; onSignOut: () => void }) {
         onPress={onSignOut}
         style={{
           flexDirection: "row", alignItems: "center", gap: 8,
-          borderRadius: 12, borderWidth: 1, borderColor: "#EF444430",
+          borderRadius: 12, borderWidth: 1, borderColor: colors.danger + "30",
           paddingHorizontal: 16, paddingVertical: 12,
-          backgroundColor: "#EF444408",
+          backgroundColor: colors.danger + "08",
         }}
       >
-        <Feather name="log-out" size={15} color="#EF4444" />
-        <Text style={{ fontSize: 14, fontWeight: "600", color: "#EF4444" }}>Sign Out</Text>
+        <Feather name="log-out" size={15} color={colors.danger} />
+        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.danger }}>Sign Out</Text>
       </TouchableOpacity>
     </View>
   );

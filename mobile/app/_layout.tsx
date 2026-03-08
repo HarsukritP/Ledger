@@ -4,30 +4,34 @@ import { Auth0Provider } from "../lib/auth-provider";
 import { StatusBar } from "expo-status-bar";
 import { useAuthToken } from "../hooks/useAuthToken";
 import { View } from "react-native";
+import { ThemeProvider, useTheme } from "../lib/theme";
 
 const AUTH0_DOMAIN = process.env.EXPO_PUBLIC_AUTH0_DOMAIN ?? "";
 const AUTH0_CLIENT_ID = process.env.EXPO_PUBLIC_AUTH0_CLIENT_ID ?? "";
-
-const APP_BG = "#09090B";
 
 function TokenSyncer() {
   useAuthToken();
   return null;
 }
 
+function ThemedApp() {
+  const { colors, resolved } = useTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style={colors.statusBar} backgroundColor={colors.bg} translucent />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+    </View>
+  );
+}
+
 export default function RootLayout() {
   return (
     <Auth0Provider domain={AUTH0_DOMAIN} clientId={AUTH0_CLIENT_ID}>
-      <TokenSyncer />
-      {/*
-        Dark background on the root View ensures the status-bar area and
-        home-indicator area never flash white — the CSS in +html.tsx does the
-        same job for the browser layer below React Native.
-      */}
-      <View style={{ flex: 1, backgroundColor: APP_BG }}>
-        <StatusBar style="light" backgroundColor={APP_BG} translucent />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: APP_BG } }} />
-      </View>
+      <ThemeProvider>
+        <TokenSyncer />
+        <ThemedApp />
+      </ThemeProvider>
     </Auth0Provider>
   );
 }

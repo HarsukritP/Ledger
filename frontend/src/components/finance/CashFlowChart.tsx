@@ -40,6 +40,10 @@ function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+const PULSE_COLOR = "#3B82F6";
+const DANGER_COLOR = "#EF4444";
+const HISTORY_COLOR = "var(--color-text-muted)";
+
 export function CashFlowChart({
   historyEvents = [],
   forecastEvents = [],
@@ -125,7 +129,6 @@ export function CashFlowChart({
       const ts = timeMin + step * i;
       labels.push({ ts, label: formatDate(ts) });
     }
-    // Deduplicate adjacent identical labels
     return labels.filter((l, i) => i === 0 || l.label !== labels[i - 1].label);
   }, [timeMin, timeMax]);
 
@@ -158,7 +161,6 @@ export function CashFlowChart({
   return (
     <div className={className}>
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
-        {/* Horizontal gridlines */}
         {yTicks.map((tick) => (
           <line
             key={`grid-${tick}`}
@@ -166,29 +168,27 @@ export function CashFlowChart({
             y1={toY(tick)}
             x2={padding.left + chartW}
             y2={toY(tick)}
-            stroke="#27272A"
+            stroke="var(--color-chart-grid)"
             strokeWidth={0.5}
             opacity={0.5}
           />
         ))}
 
-        {/* Danger zone */}
         {dangerThreshold > minVal && (
           <rect
             x={padding.left}
             y={dangerY}
             width={chartW}
             height={Math.max(0, toY(minVal) - dangerY)}
-            fill="#EF4444"
+            fill={DANGER_COLOR}
             opacity={0.06}
           />
         )}
 
-        {/* History area fill */}
         {historyAreaPath && (
           <motion.path
             d={historyAreaPath}
-            fill="#A1A1AA"
+            fill={HISTORY_COLOR}
             opacity={0.06}
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.06 }}
@@ -196,11 +196,10 @@ export function CashFlowChart({
           />
         )}
 
-        {/* Forecast area fill */}
         {forecastAreaPath && (
           <motion.path
             d={forecastAreaPath}
-            fill="#D4A853"
+            fill={PULSE_COLOR}
             opacity={0.08}
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.08 }}
@@ -208,34 +207,31 @@ export function CashFlowChart({
           />
         )}
 
-        {/* History line */}
         {historyPath && (
           <motion.path
             d={historyPath}
             fill="none"
-            stroke="#71717A"
-            strokeWidth={1.5}
+            stroke={HISTORY_COLOR}
             strokeDasharray="4 3"
+            strokeWidth={1.5}
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 0.8, ease: [0.33, 1, 0.68, 1] }}
           />
         )}
 
-        {/* Forecast line */}
         {forecastPath && (
           <motion.path
             d={forecastPath}
             fill="none"
-            stroke="#D4A853"
-            strokeWidth={1.5}
+            stroke={PULSE_COLOR}
+            strokeWidth={2}
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 1.2, delay: 0.3, ease: [0.33, 1, 0.68, 1] }}
           />
         )}
 
-        {/* Today vertical line */}
         {hasHistory && (
           <>
             <line
@@ -243,7 +239,7 @@ export function CashFlowChart({
               y1={padding.top}
               x2={todayX}
               y2={padding.top + chartH}
-              stroke="#D4A853"
+              stroke={PULSE_COLOR}
               strokeWidth={1}
               strokeDasharray="3 3"
               opacity={0.4}
@@ -252,60 +248,59 @@ export function CashFlowChart({
               x={todayX}
               y={padding.top - 6}
               textAnchor="middle"
-              className="fill-gold text-[10px] font-medium"
+              fill={PULSE_COLOR}
+              className="text-[10px] font-medium"
             >
               Today
             </text>
           </>
         )}
 
-        {/* Forecast dots */}
         {forecastPoints.map((p, i) => (
           <circle
             key={`f-${i}`}
             cx={toX(p.ts)}
             cy={toY(p.y)}
             r={3}
-            fill={p.y < dangerThreshold ? "#EF4444" : "#D4A853"}
+            fill={p.y < dangerThreshold ? DANGER_COLOR : PULSE_COLOR}
           />
         ))}
 
-        {/* Y-axis labels (nice ticks) */}
         {yTicks.map((tick) => (
           <text
             key={`y-${tick}`}
             x={padding.left - 8}
             y={toY(tick) + 4}
             textAnchor="end"
-            className="fill-text-muted text-[10px] font-mono"
+            fill="var(--color-chart-text)"
+            className="text-[10px] font-mono"
           >
             ${tick.toLocaleString()}
           </text>
         ))}
 
-        {/* X-axis date labels */}
         {xDateLabels.map((d, i) => (
           <text
             key={`x-${i}`}
             x={toX(d.ts)}
             y={padding.top + chartH + 18}
             textAnchor="middle"
-            className="fill-text-muted text-[10px]"
+            fill="var(--color-chart-text)"
+            className="text-[10px]"
           >
             {d.label}
           </text>
         ))}
       </svg>
 
-      {/* Legend */}
       {hasHistory && (
         <div className="mt-2 flex items-center justify-center gap-6 text-[10px] text-text-muted">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-0.5 w-4 border-t border-dashed border-zinc-500" />
+            <span className="inline-block h-0.5 w-4 border-t border-dashed border-text-muted" />
             Past
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-0.5 w-4 bg-gold" />
+            <span className="inline-block h-0.5 w-4 rounded-full" style={{ backgroundColor: PULSE_COLOR }} />
             Projected
           </span>
         </div>
