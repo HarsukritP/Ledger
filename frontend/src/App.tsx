@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ThemeProvider } from "./lib/theme";
 import { AppLayout } from "./components/layout/AppLayout";
@@ -12,6 +13,29 @@ import { OnboardingPage } from "./pages/OnboardingPage";
 import { CallbackPage } from "./pages/CallbackPage";
 import { LandingPage } from "./pages/LandingPage";
 import { useAuthToken } from "./hooks/useAuthToken";
+
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Dashboard",
+  "/cashflow": "Cashflow",
+  "/expenses": "Expenses",
+  "/goals": "Goals",
+  "/chat": "Chat",
+  "/settings": "Settings",
+  "/onboarding": "Onboarding",
+  "/welcome": "Welcome",
+  "/callback": "Signing In",
+};
+
+function PageTitleUpdater() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const page = PAGE_TITLES[pathname] || "Dashboard";
+    document.title = `Ledger Financial | ${page}`;
+  }, [pathname]);
+
+  return null;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth0();
@@ -37,6 +61,7 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
+        <PageTitleUpdater />
         <Routes>
           <Route path="/welcome" element={<LandingPage />} />
           <Route path="/callback" element={<CallbackPage />} />
