@@ -176,13 +176,13 @@ class EmailService:
     async def _scan_gmail(self, access_token: str) -> list[dict]:
         """Search Gmail for billing/receipt emails, then use LLM to extract charges."""
         query = " OR ".join(f'"{kw}"' for kw in BILLING_KEYWORDS)
-        query = f"({query}) newer_than:90d"
+        query = f"({query}) newer_than:180d"
 
         try:
             async with httpx.AsyncClient(timeout=30) as http:
                 resp = await http.get(
                     f"{GMAIL_API_BASE}/users/me/messages",
-                    params={"q": query, "maxResults": 100},
+                    params={"q": query, "maxResults": 200},
                     headers={"Authorization": f"Bearer {access_token}"},
                 )
                 if resp.status_code != 200:
@@ -192,7 +192,7 @@ class EmailService:
                 logger.info(f"[EMAIL] Found {len(messages)} candidate emails")
 
                 emails = []
-                for msg_ref in messages[:50]:
+                for msg_ref in messages[:150]:
                     email_data = await self._fetch_email(http, access_token, msg_ref["id"])
                     if email_data:
                         emails.append(email_data)
