@@ -280,7 +280,7 @@ class EmailService:
     # ------------------------------------------------------------------
 
     async def _extract_with_llm(self, emails: list[dict]) -> list[dict]:
-        """Send a batch of emails to the Backboard Audit specialist for extraction."""
+        """Send a batch of emails to Backboard for LLM extraction."""
         if not emails:
             return []
 
@@ -290,21 +290,30 @@ class EmailService:
 
         try:
             from app.services.backboard_service import backboard_service
-            result = await backboard_service._call_specialist("audit", prompt, user_sub="")
 
-            if isinstance(result, list):
-                return self._validate_charges(result)
+            if not backboard_service._initialized:
+                logger.info("[EMAIL] Initializing Backboard for email scan...")
+                await backboard_service.initialize()
 
-            if isinstance(result, dict):
-                for key in ("charges", "subscriptions", "data", "results"):
-                    if isinstance(result.get(key), list):
-                        return self._validate_charges(result[key])
+            client = backboard_service._get_client()
+            audit_id = backboard_service._specialist_ids.get("audit")
+            if not audit_id:
+                logger.error("[EMAIL] Audit specialist not found")
+                return []
 
-                raw = result.get("analysis", result.get("_raw_non_json", ""))
-                if isinstance(raw, str):
-                    return self._parse_json_array(raw)
+            thread = await client.create_thread(audit_id)
+            response = await client.add_message(
+                thread_id=thread.thread_id,
+                content=prompt,
+                memory="off",
+                stream=False,
+                llm_provider=settings.llm_provider,
+                model_name=settings.llm_model,
+            )
+            raw = getattr(response, "content", "") or str(response)
+            logger.info(f"[EMAIL] LLM response: {len(raw)} chars, preview={raw[:200]}")
 
-            return []
+            return self._parse_json_array(raw)
 
         except Exception as e:
             logger.error(f"LLM extraction failed: {e}")
