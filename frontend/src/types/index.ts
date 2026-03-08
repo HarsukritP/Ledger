@@ -41,7 +41,7 @@ export const AGENTS: Record<AgentName, AgentInfo> = {
 
 export interface ActionItem {
   id: string;
-  agent: AgentName;
+  agent: string;
   type: "warning" | "suggestion" | "question";
   title: string;
   description: string;

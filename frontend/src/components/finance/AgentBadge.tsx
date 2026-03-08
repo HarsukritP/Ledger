@@ -1,13 +1,19 @@
 import { cn } from "../../lib/utils";
 import { type AgentName, AGENTS } from "../../types";
 
+const FALLBACK_AGENT = {
+  displayName: "Council",
+  color: "#A78BFA",
+  bgColor: "#A78BFA15",
+};
+
 interface AgentBadgeProps {
-  agent: AgentName;
+  agent: string;
   className?: string;
 }
 
 export function AgentBadge({ agent, className }: AgentBadgeProps) {
-  const info = AGENTS[agent];
+  const info = AGENTS[agent as AgentName] ?? FALLBACK_AGENT;
 
   return (
     <span
