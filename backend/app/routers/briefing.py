@@ -1,5 +1,6 @@
 import logging
 import traceback
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.models import BriefingOut
@@ -10,10 +11,7 @@ router = APIRouter(prefix="/briefing", tags=["briefing"])
 
 @router.post("/generate", response_model=BriefingOut)
 async def generate_briefing(user=Depends(get_current_user)):
-    """Generate a weekly briefing via the Backboard Council agent.
-
-    Surfaces errors as 500s — no silent fallbacks.
-    """
+    """Generate a weekly briefing via the Backboard Council agent."""
     from app.services.backboard_service import backboard_service
 
     user_sub = user.get("sub", "")
@@ -39,7 +37,7 @@ async def generate_briefing(user=Depends(get_current_user)):
         id="briefing_latest",
         content=content,
         audio_url=None,
-        created_at="2026-03-07T12:00:00Z",
+        created_at=datetime.utcnow().isoformat() + "Z",
     )
 
 

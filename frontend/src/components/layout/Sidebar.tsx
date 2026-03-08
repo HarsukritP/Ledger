@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
   TrendingUp,
-  CreditCard,
+  Receipt,
   Target,
   MessageCircle,
   Settings,
@@ -15,8 +15,8 @@ import { cn } from "../../lib/utils";
 
 const NAV_ITEMS = [
   { to: "/", icon: Home, label: "Home" },
-  { to: "/forecast", icon: TrendingUp, label: "Forecast" },
-  { to: "/subscriptions", icon: CreditCard, label: "Subscriptions" },
+  { to: "/cashflow", icon: TrendingUp, label: "Cashflow" },
+  { to: "/expenses", icon: Receipt, label: "Expenses" },
   { to: "/goals", icon: Target, label: "Goals" },
   { to: "/chat", icon: MessageCircle, label: "Chat" },
   { to: "/settings", icon: Settings, label: "Settings" },

@@ -51,6 +51,7 @@ export const api = {
   dashboard: {
     briefing: () => request<any>("/dashboard/briefing"),
     health: () => request<any>("/dashboard/health"),
+    categories: (days = 30) => request<any[]>(`/dashboard/categories?days=${days}`),
     action: (id: string, response: string) =>
       request(`/dashboard/action/${id}`, {
         method: "POST",
@@ -58,16 +59,16 @@ export const api = {
       }),
   },
 
-  forecast: {
-    get: () => request<any>("/forecast"),
-    events: () => request<any[]>("/forecast/events"),
+  cashflow: {
+    get: (historyDays = 30) => request<any>(`/cashflow?history_days=${historyDays}`),
+    events: () => request<any[]>("/cashflow/events"),
   },
 
-  subscriptions: {
-    list: () => request<any[]>("/subscriptions"),
-    get: (id: string) => request<any>(`/subscriptions/${id}`),
+  expenses: {
+    list: () => request<any[]>("/expenses"),
+    get: (id: string) => request<any>(`/expenses/${id}`),
     decide: (id: string, decision: string, reason?: string) =>
-      request(`/subscriptions/${id}/decision?decision=${decision}&reason=${reason || ""}`, {
+      request(`/expenses/${id}/decision?decision=${decision}&reason=${reason || ""}`, {
         method: "POST",
       }),
   },
@@ -120,12 +121,22 @@ export const api = {
       }),
   },
 
+  email: {
+    accounts: () => request<any>("/email/accounts"),
+    authUrl: () => request<any>("/email/auth-url"),
+    callback: (code: string) => request<any>(`/email/callback?code=${encodeURIComponent(code)}`, { method: "POST" }),
+    scan: () => request<any>("/email/scan", { method: "POST" }),
+    unlink: (id: string) => request<any>(`/email/accounts/${id}`, { method: "DELETE" }),
+  },
+
   settings: {
     get: () => request<any>("/settings"),
     update: (prefs: any) =>
       request("/settings", { method: "PATCH", body: JSON.stringify(prefs) }),
+    memories: () => request<any>("/settings/memories"),
     deleteMemory: (id: string) =>
       request(`/settings/memory/${id}`, { method: "DELETE" }),
-    export: () => request("/settings/export", { method: "POST" }),
+    export: () => request<any>("/settings/export", { method: "POST" }),
+    deleteAccount: () => request("/settings/account", { method: "DELETE" }),
   },
 };

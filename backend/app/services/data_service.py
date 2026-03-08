@@ -357,6 +357,32 @@ class DataService:
         )
         return result.data or []
 
+    # ── Historical Cashflow (past transactions as daily events) ─
+
+    def get_history_events(self, user_db_id: str, days: int = 30) -> list[dict]:
+        """Return actual past transactions grouped by day as cashflow events."""
+        txns = self.get_transactions(user_db_id, days=days)
+        daily: dict[str, list[dict]] = defaultdict(list)
+        for t in txns:
+            d = t.get("date", "")
+            if d:
+                daily[d].append(t)
+
+        events = []
+        for day_str in sorted(daily.keys()):
+            for t in daily[day_str]:
+                amt = float(t.get("amount", 0))
+                events.append({
+                    "id": t.get("id", ""),
+                    "date": day_str,
+                    "name": t.get("merchant_name") or t.get("category") or "Transaction",
+                    "amount": amt,
+                    "type": t.get("type", "expense"),
+                    "category": t.get("category", ""),
+                    "is_history": True,
+                })
+        return events
+
     # ── Spending by Category ──────────────────────────────────
 
     def get_category_breakdown(self, user_db_id: str, days: int = 30) -> list[dict]:

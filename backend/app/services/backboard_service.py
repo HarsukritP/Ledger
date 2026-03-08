@@ -125,6 +125,25 @@ class BackboardService:
             logger.error(f"REST POST {path} failed: {e}\n{traceback.format_exc()}")
             raise BackboardError(f"Backboard POST {path} failed: {e}") from e
 
+    async def _rest_delete(self, path: str) -> dict:
+        full_url = f"{BASE_URL}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=15) as http:
+                resp = await http.delete(full_url, headers={"X-API-Key": self.api_key})
+                if resp.status_code not in (200, 204):
+                    logger.error(
+                        f"REST DELETE {path} → {resp.status_code}: {resp.text[:500]}"
+                    )
+                    raise BackboardError(
+                        f"Backboard DELETE {path} returned {resp.status_code}: {resp.text[:200]}"
+                    )
+                return resp.json() if resp.text else {}
+        except BackboardError:
+            raise
+        except Exception as e:
+            logger.error(f"REST DELETE {path} failed: {e}\n{traceback.format_exc()}")
+            raise BackboardError(f"Backboard DELETE {path} failed: {e}") from e
+
     # ------------------------------------------------------------------
     # Initialization
     # ------------------------------------------------------------------
@@ -289,6 +308,32 @@ class BackboardService:
             f"Memory seeding for {user_sub}: {success} ok, {failed} failed "
             f"out of {len(memories)}"
         )
+
+    async def list_memories(self, user_sub: str) -> list[dict]:
+        """List all memories for a user's Council assistant."""
+        council_id = self._council_ids.get(user_sub)
+        if not council_id:
+            return []
+        try:
+            data = await self._rest_get(f"/assistants/{council_id}/memories")
+            if isinstance(data, list):
+                return data
+            return data.get("memories", data.get("data", []))
+        except BackboardError as e:
+            logger.warning(f"Could not list memories for {user_sub}: {e}")
+            return []
+
+    async def delete_memory(self, user_sub: str, memory_id: str) -> bool:
+        """Delete a specific memory from a user's Council assistant."""
+        council_id = self._council_ids.get(user_sub)
+        if not council_id:
+            return False
+        try:
+            await self._rest_delete(f"/assistants/{council_id}/memories/{memory_id}")
+            return True
+        except BackboardError as e:
+            logger.warning(f"Could not delete memory {memory_id}: {e}")
+            return False
 
     async def _build_user_memories(self, user_sub: str) -> list[str]:
         """Generate memory entries from the user's real transaction data."""

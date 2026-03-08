@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Link2, Shield, Bell, Info, LogOut, Database, Loader2, CheckCircle2, RefreshCw } from "lucide-react";
+import { Link2, Shield, Bell, Info, LogOut, Database, Loader2, CheckCircle2, RefreshCw, Download, Trash2, Mail, Building2, Search } from "lucide-react";
 import { cn } from "../lib/utils";
 import { api } from "../lib/api";
 
@@ -58,42 +58,11 @@ export function SettingsPage() {
       >
         {tab === "accounts" && <AccountsTab />}
 
-        {tab === "preferences" && (
-          <div className="space-y-6">
-            <PreferenceRow label="Briefing Frequency" options={["Daily", "Weekly"]} defaultValue="Weekly" />
-            <PreferenceRow label="Communication Style" options={["Brief", "Detailed"]} defaultValue="Brief" />
-            <PreferenceRow label="Agent Strictness" options={["Gentle", "Balanced", "Strict"]} defaultValue="Balanced" />
-          </div>
-        )}
+        {tab === "preferences" && <PreferencesTab />}
 
         {tab === "sandbox" && <SandboxTab />}
 
-        {tab === "privacy" && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-text-primary">What Ledger Remembers</h3>
-            {[
-              "You get paid biweekly on the 15th and 30th",
-              "Rent is $1,200, due on the 1st",
-              "You kept gym membership in February",
-              "You tend to overspend on dining early in the month",
-            ].map((memory, i) => (
-              <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-base p-3">
-                <p className="text-sm text-text-secondary">{memory}</p>
-                <button className="shrink-0 rounded-full border border-danger/30 px-3 py-1 text-xs text-danger">
-                  Forget
-                </button>
-              </div>
-            ))}
-            <div className="flex gap-3 pt-4">
-              <button className="rounded-full border border-border px-4 py-2 text-xs text-text-secondary hover:bg-surface-raised">
-                Export My Data
-              </button>
-              <button className="rounded-full border border-danger/30 px-4 py-2 text-xs text-danger">
-                Delete My Account
-              </button>
-            </div>
-          </div>
-        )}
+        {tab === "privacy" && <PrivacyTab />}
 
         {tab === "about" && (
           <div className="space-y-4">
@@ -134,27 +103,57 @@ export function SettingsPage() {
 }
 
 function AccountsTab() {
-  const [accounts, setAccounts] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [linkingEmail, setLinkingEmail] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
-  useState(() => {
-    api.plaid
-      .accounts()
-      .then((data: any) => setAccounts(data.accounts || []))
-      .catch(() => setAccounts([]))
-      .finally(() => setLoading(false));
-  });
+  useEffect(() => {
+    Promise.all([
+      api.plaid.accounts().then((data: any) => setBankAccounts(data.accounts || [])).catch(() => {}),
+      api.email.accounts().then((data: any) => setEmailAccounts(data.accounts || [])).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       const data = await api.plaid.accounts();
-      setAccounts((data as any).accounts || []);
-    } catch {
-      /* keep stale data visible */
+      setBankAccounts((data as any).accounts || []);
+    } catch { /* keep stale */ }
+    finally { setRefreshing(false); }
+  };
+
+  const handleLinkEmail = async () => {
+    setLinkingEmail(true);
+    try {
+      const data = await api.email.authUrl();
+      window.location.href = data.auth_url;
+    } catch (err: any) {
+      console.error("[EMAIL] Auth URL failed:", err);
+      setLinkingEmail(false);
+    }
+  };
+
+  const handleScanEmails = async () => {
+    setScanning(true);
+    try {
+      await api.email.scan();
+    } catch (err) {
+      console.error("[EMAIL] Scan failed:", err);
     } finally {
-      setRefreshing(false);
+      setScanning(false);
+    }
+  };
+
+  const handleUnlinkEmail = async (id: string) => {
+    try {
+      await api.email.unlink(id);
+      setEmailAccounts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.error("[EMAIL] Unlink failed:", err);
     }
   };
 
@@ -168,34 +167,94 @@ function AccountsTab() {
   }
 
   return (
-    <div className="space-y-4">
-      {accounts.length > 0 ? (
-        <>
-          {accounts.map((acct, i) => (
-            <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-base p-4">
-              <div>
-                <p className="text-sm font-medium text-text-primary">
-                  {acct.institution_name || "Bank"} — {acct.name}
-                </p>
-                <p className="text-xs text-text-muted">
-                  {acct.type} &middot; ${acct.balance_current?.toLocaleString() ?? "—"}
-                  {acct.stale && " (cached)"}
-                </p>
+    <div className="space-y-6">
+      {/* Bank Accounts */}
+      <div className="space-y-3">
+        <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+          <Building2 size={14} /> Bank Accounts
+        </h3>
+        {bankAccounts.length > 0 ? (
+          <>
+            {bankAccounts.map((acct, i) => (
+              <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-base p-4">
+                <div className="flex items-center gap-3">
+                  <Building2 size={16} className="shrink-0 text-gold" />
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">
+                      {acct.institution_name || "Bank"} — {acct.name}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {acct.type} &middot; ${acct.balance_current?.toLocaleString() ?? "—"}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium text-text-secondary hover:bg-surface-raised disabled:opacity-50"
-          >
-            {refreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-            Refresh Accounts
-          </button>
-        </>
-      ) : (
-        <p className="py-4 text-center text-sm text-text-muted">No linked accounts. Go through onboarding to link a bank.</p>
-      )}
+            ))}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium text-text-secondary hover:bg-surface-raised disabled:opacity-50"
+            >
+              {refreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              Refresh Accounts
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-text-muted">No bank accounts linked. Go through onboarding to link a bank.</p>
+        )}
+      </div>
+
+      {/* Email Accounts */}
+      <div className="space-y-3">
+        <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+          <Mail size={14} /> Email Accounts
+        </h3>
+        {emailAccounts.length > 0 ? (
+          <>
+            {emailAccounts.map((acct) => (
+              <div key={acct.id} className="flex items-center justify-between rounded-xl border border-border bg-base p-4">
+                <div className="flex items-center gap-3">
+                  <Mail size={16} className="shrink-0 text-blue-400" />
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{acct.email_address}</p>
+                    <p className="text-xs text-text-muted">
+                      {acct.provider} &middot; {acct.last_scanned_at ? `Scanned ${new Date(acct.last_scanned_at).toLocaleDateString()}` : "Not scanned yet"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleUnlinkEmail(acct.id)}
+                  className="shrink-0 rounded-full border border-danger/30 px-3 py-1 text-xs text-danger"
+                >
+                  Unlink
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={handleScanEmails}
+              disabled={scanning}
+              className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium text-text-secondary hover:bg-surface-raised disabled:opacity-50"
+            >
+              {scanning ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+              Scan for Receipts
+            </button>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-text-muted">
+              Link your email to automatically detect subscriptions from billing receipts.
+            </p>
+            <button
+              onClick={handleLinkEmail}
+              disabled={linkingEmail}
+              className="flex items-center gap-2 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black disabled:opacity-50"
+            >
+              {linkingEmail ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+              Link Gmail Account
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -263,16 +322,163 @@ function SandboxTab() {
   );
 }
 
+function PreferencesTab() {
+  const [prefs, setPrefs] = useState({
+    briefing_frequency: "weekly",
+    communication_style: "brief",
+    agent_strictness: "balanced",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.settings
+      .get()
+      .then((data: any) => {
+        setPrefs({
+          briefing_frequency: data.briefing_frequency || "weekly",
+          communication_style: data.communication_style || "brief",
+          agent_strictness: data.agent_strictness || "balanced",
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const updatePref = (key: string, value: string) => {
+    const updated = { ...prefs, [key]: value };
+    setPrefs(updated);
+    setSaving(true);
+    api.settings.update(updated).catch(console.error).finally(() => setSaving(false));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8 text-text-muted">
+        <Loader2 size={18} className="animate-spin" />
+        <span className="ml-2 text-sm">Loading preferences...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {saving && <p className="text-[10px] text-gold">Saving...</p>}
+      <PreferenceRow
+        label="Briefing Frequency"
+        options={["daily", "weekly"]}
+        value={prefs.briefing_frequency}
+        onChange={(v) => updatePref("briefing_frequency", v)}
+      />
+      <PreferenceRow
+        label="Communication Style"
+        options={["brief", "detailed"]}
+        value={prefs.communication_style}
+        onChange={(v) => updatePref("communication_style", v)}
+      />
+      <PreferenceRow
+        label="Agent Strictness"
+        options={["gentle", "balanced", "strict"]}
+        value={prefs.agent_strictness}
+        onChange={(v) => updatePref("agent_strictness", v)}
+      />
+    </div>
+  );
+}
+
+function PrivacyTab() {
+  const { logout } = useAuth0();
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const data = await api.settings.export();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ledger-export.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("[SETTINGS] Export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.settings.deleteAccount();
+      logout({ logoutParams: { returnTo: window.location.origin + "/welcome" } });
+    } catch (err) {
+      console.error("[SETTINGS] Delete failed:", err);
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold text-text-primary">Your Data</h3>
+      <p className="text-xs text-text-muted">
+        Ledger stores your transaction data, goals, and preferences.
+        You can export or permanently delete all of it below.
+      </p>
+      <div className="flex gap-3 pt-2">
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs text-text-secondary hover:bg-surface-raised disabled:opacity-50"
+        >
+          {exporting ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+          Export My Data
+        </button>
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="flex items-center gap-2 rounded-full border border-danger/30 px-4 py-2 text-xs text-danger"
+          >
+            <Trash2 size={12} />
+            Delete My Account
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-danger">Are you sure?</span>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded-full bg-danger px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {deleting ? "Deleting..." : "Yes, Delete Everything"}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="rounded-full border border-border px-3 py-2 text-xs text-text-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PreferenceRow({
   label,
   options,
-  defaultValue,
+  value,
+  onChange,
 }: {
   label: string;
   options: string[];
-  defaultValue: string;
+  value: string;
+  onChange: (v: string) => void;
 }) {
-  const [selected, setSelected] = useState(defaultValue);
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-text-secondary">{label}</span>
@@ -280,10 +486,10 @@ function PreferenceRow({
         {options.map((opt) => (
           <button
             key={opt}
-            onClick={() => setSelected(opt)}
+            onClick={() => onChange(opt)}
             className={cn(
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-              selected === opt
+              "rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors",
+              value === opt
                 ? "bg-gold text-black"
                 : "text-text-muted hover:text-text-secondary"
             )}

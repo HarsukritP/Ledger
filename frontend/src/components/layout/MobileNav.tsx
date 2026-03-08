@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   Home,
   TrendingUp,
-  CreditCard,
+  Receipt,
   Target,
   MessageCircle,
 } from "lucide-react";
@@ -10,8 +10,8 @@ import { cn } from "../../lib/utils";
 
 const NAV_ITEMS = [
   { to: "/", icon: Home, label: "Home" },
-  { to: "/forecast", icon: TrendingUp, label: "Forecast" },
-  { to: "/subscriptions", icon: CreditCard, label: "Subs" },
+  { to: "/cashflow", icon: TrendingUp, label: "Cashflow" },
+  { to: "/expenses", icon: Receipt, label: "Expenses" },
   { to: "/goals", icon: Target, label: "Goals" },
   { to: "/chat", icon: MessageCircle, label: "Chat" },
 ];

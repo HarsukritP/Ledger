@@ -17,10 +17,13 @@ export function HomePage() {
   const [health, setHealth] = useState<HealthMetrics | null>(null);
   const [weekAhead, setWeekAhead] = useState<ForecastEvent[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
+  const [categories, setCategories] = useState<{ category: string; amount: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    api.dashboard.categories(30).then((data: any[]) => setCategories(data || [])).catch(() => {});
+
     api.dashboard
       .briefing()
       .then((data: any) => {
@@ -189,6 +192,42 @@ export function HomePage() {
           )}
         </motion.div>
       </div>
+
+      {/* Spending by Category */}
+      {categories.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-2xl border border-border bg-surface p-5"
+        >
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">This Month's Spending</h2>
+          <div className="space-y-2">
+            {categories.slice(0, 5).map((cat) => {
+              const totalSpent = categories.reduce((s, c) => s + c.amount, 0);
+              const pct = totalSpent > 0 ? (cat.amount / totalSpent) * 100 : 0;
+              return (
+                <div key={cat.category} className="flex items-center gap-3">
+                  <span className="w-32 truncate text-xs text-text-secondary">
+                    {cat.category.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  </span>
+                  <div className="flex-1">
+                    <div className="h-1.5 rounded-full bg-border">
+                      <div
+                        className="h-full rounded-full bg-gold"
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="w-16 text-right font-mono text-xs text-text-muted">
+                    ${cat.amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
