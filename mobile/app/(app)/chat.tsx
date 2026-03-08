@@ -137,7 +137,7 @@ export default function ChatScreen() {
               Talk to Ledger
             </Text>
             <Text className="text-sm text-text-muted mt-0.5">
-              Ask anything about your finances
+              Ask anything about your finances — your agents are listening
             </Text>
           </View>
           {messages.length > 0 && (

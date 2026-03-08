@@ -123,7 +123,7 @@ export default function SubscriptionsScreen() {
         {/* Header */}
         <View className="flex-row items-center gap-3">
           <Text className="text-2xl font-bold tracking-tight text-text-primary">
-            Subscriptions
+            Expenses
           </Text>
           <AgentBadge agent="audit" />
         </View>
@@ -252,7 +252,7 @@ export default function SubscriptionsScreen() {
                     <Text className="text-sm text-text-secondary leading-5 mb-3">
                       {sub.valueScore <= 2
                         ? `You're paying $${sub.amount}/mo for ${sub.name}. Consider cancelling to save $${(sub.amount * 12).toFixed(0)}/year.`
-                        : `${sub.name} appears to be a regular charge at $${sub.amount}/mo. Seems worth keeping.`}
+                        : `${sub.name} appears to be a regular charge at $${sub.amount}/mo. Seems worth keeping based on frequency.`}
                     </Text>
                     <View className="flex-row gap-2">
                       <Pressable

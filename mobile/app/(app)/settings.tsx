@@ -377,7 +377,8 @@ function SandboxTab() {
       <Text className="text-xs text-text-muted leading-5">
         Generate 8 weeks of realistic transaction data: biweekly paychecks,
         rent, subscriptions, dining, shopping, and more. This replaces any
-        existing transactions.
+        existing transactions and populates the dashboard, forecasts, and
+        subscription views.
       </Text>
       <Pressable
         onPress={handleSeed}
@@ -420,9 +421,28 @@ function SandboxTab() {
 
 function PrivacyTab() {
   const { clearSession } = useAuth0();
+  const [memories, setMemories] = useState<any[]>([]);
+  const [memoriesLoading, setMemoriesLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    api.settings
+      .memories()
+      .then((data: any) => setMemories(data.memories || []))
+      .catch(() => {})
+      .finally(() => setMemoriesLoading(false));
+  }, []);
+
+  const handleForgetMemory = async (id: string) => {
+    try {
+      await api.settings.deleteMemory(id);
+      setMemories((prev) => prev.filter((m) => m.id !== id));
+    } catch (err) {
+      console.error("[SETTINGS] Delete memory failed:", err);
+    }
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -458,11 +478,44 @@ function PrivacyTab() {
   };
 
   return (
-    <View className="gap-4">
-      <Text className="text-sm font-semibold text-text-primary">Your Data</Text>
-      <Text className="text-xs text-text-muted leading-5">
-        Ledger stores your transaction data, goals, and preferences. You can export or permanently delete all of it below.
-      </Text>
+    <View className="gap-5">
+      {/* What Ledger Remembers */}
+      <View className="gap-3">
+        <Text className="text-sm font-semibold text-text-primary">
+          What Ledger Remembers
+        </Text>
+        {memoriesLoading ? (
+          <ActivityIndicator size="small" color="#71717A" />
+        ) : memories.length > 0 ? (
+          memories.map((memory) => (
+            <View
+              key={memory.id}
+              className="flex-row items-center justify-between rounded-xl border border-border bg-base p-3"
+            >
+              <Text className="text-sm text-text-secondary flex-1 mr-3" numberOfLines={3}>
+                {memory.content || memory.text || String(memory)}
+              </Text>
+              <Pressable
+                onPress={() => handleForgetMemory(memory.id)}
+                className="rounded-full border border-danger/30 px-3 py-1 shrink-0"
+              >
+                <Text className="text-xs text-danger">Forget</Text>
+              </Pressable>
+            </View>
+          ))
+        ) : (
+          <Text className="text-sm text-text-muted">
+            No memories stored yet. Ledger will learn from your activity over time.
+          </Text>
+        )}
+      </View>
+
+      {/* Your Data */}
+      <View className="gap-3">
+        <Text className="text-sm font-semibold text-text-primary">Your Data</Text>
+        <Text className="text-xs text-text-muted leading-5">
+          Ledger stores your transaction data, goals, and preferences. You can export or permanently delete all of it below.
+        </Text>
       <View className="flex-row gap-3 pt-1 flex-wrap">
         <Pressable
           onPress={handleExport}
@@ -509,6 +562,7 @@ function PrivacyTab() {
           </View>
         )}
       </View>
+      </View>
     </View>
   );
 }
@@ -543,12 +597,13 @@ function AboutTab({
         </View>
       )}
       <Text className="text-sm text-text-secondary">
-        <Text className="text-text-primary font-medium">Ledger</Text> v1.0.0
+        <Text className="text-text-primary font-medium">Ledger</Text> v0.1.0
       </Text>
       <Text className="text-xs text-text-muted leading-5">
         Ledger provides educational financial guidance, not regulated financial
         advice. Ledger does not execute trades, call banks, or impersonate
-        financial advisors. All recommendations require user confirmation.
+        financial advisors. All recommendations are preference-based and require
+        user confirmation.
       </Text>
       <Text className="text-xs text-text-muted">Built for Hack Canada 2026.</Text>
       <Pressable

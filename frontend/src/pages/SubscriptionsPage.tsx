@@ -93,7 +93,7 @@ export function SubscriptionsPage() {
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Subscriptions</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Expenses</h1>
           <AgentBadge agent="audit" />
         </div>
       </motion.div>

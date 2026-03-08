@@ -107,6 +107,22 @@ export default function GoalsScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-base px-4 items-center justify-center">
+        <View className="rounded-2xl border border-danger/20 bg-danger/5 p-6 w-full items-center">
+          <Text className="text-sm text-danger text-center mb-3">{error}</Text>
+          <Pressable
+            onPress={() => loadGoals()}
+            className="rounded-full bg-gold px-5 py-2"
+          >
+            <Text className="text-xs font-medium text-black">Retry</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-base">
       <ScrollView

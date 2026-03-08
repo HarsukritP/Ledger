@@ -111,7 +111,7 @@ export default function ForecastScreen() {
         <View>
           <View className="flex-row items-center gap-3 mb-2">
             <Text className="text-2xl font-bold tracking-tight text-text-primary">
-              Next 30 Days
+              Cash Flow
             </Text>
             <AgentBadge agent="pulse" />
           </View>
@@ -124,7 +124,7 @@ export default function ForecastScreen() {
             />
             {data.predictedLow < data.dangerThreshold && lowDateFormatted && (
               <Text className="text-sm text-warning">
-                Low: ${Math.round(data.predictedLow).toLocaleString()} on{" "}
+                Predicted low: ${Math.round(data.predictedLow).toLocaleString()} on{" "}
                 {lowDateFormatted}
               </Text>
             )}

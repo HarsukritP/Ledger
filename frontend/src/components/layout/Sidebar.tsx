@@ -15,8 +15,8 @@ import { cn } from "../../lib/utils";
 
 const NAV_ITEMS = [
   { to: "/", icon: Home, label: "Home" },
-  { to: "/forecast", icon: TrendingUp, label: "Forecast" },
-  { to: "/subscriptions", icon: CreditCard, label: "Subscriptions" },
+  { to: "/forecast", icon: TrendingUp, label: "Cash Flow" },
+  { to: "/subscriptions", icon: CreditCard, label: "Expenses" },
   { to: "/goals", icon: Target, label: "Goals" },
   { to: "/chat", icon: MessageCircle, label: "Chat" },
   { to: "/settings", icon: Settings, label: "Settings" },

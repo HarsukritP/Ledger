@@ -152,9 +152,9 @@ export default function HomeScreen() {
               color="gold"
             />
             <MetricCard
-              label="Spent"
+              label="Spent This Month"
               value={-health.spentThisMonth}
-              sub={`of $${Math.round(health.budgetLimit / 100) * 100}`}
+              sub={`of $${health.budgetLimit.toLocaleString()} avg`}
               color="danger"
             />
             <MetricCard

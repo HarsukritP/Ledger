@@ -48,7 +48,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="forecast"
         options={{
-          title: "Forecast",
+          title: "Cash Flow",
           tabBarIcon: ({ color, size }) => (
             <Feather name="trending-up" size={size} color={color} />
           ),
@@ -57,7 +57,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="subscriptions"
         options={{
-          title: "Subscriptions",
+          title: "Expenses",
           tabBarIcon: ({ color, size }) => (
             <Feather name="credit-card" size={size} color={color} />
           ),

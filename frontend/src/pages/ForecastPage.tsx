@@ -78,7 +78,7 @@ export function ForecastPage() {
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Next 30 Days</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Cash Flow</h1>
           <AgentBadge agent="pulse" />
         </div>
         <p className="mt-2 text-xs text-text-muted">Current Balance</p>
