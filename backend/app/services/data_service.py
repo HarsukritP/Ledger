@@ -294,6 +294,45 @@ class DataService:
                         "category": "Income",
                     })
 
+        goals = self.get_goals(user_db_id)
+        for g in goals:
+            target = float(g.get("target_amount", 0))
+            current = float(g.get("current_amount", 0))
+            remaining = target - current
+            if remaining <= 0:
+                continue
+
+            target_date_str = g.get("target_date")
+            if target_date_str:
+                try:
+                    target_date = date.fromisoformat(target_date_str[:10])
+                except ValueError:
+                    target_date = today + timedelta(days=180)
+            else:
+                target_date = today + timedelta(days=180)
+
+            months_left = max(
+                (target_date.year - today.year) * 12 + (target_date.month - today.month),
+                1,
+            )
+            monthly_contribution = round(remaining / months_left, 2)
+
+            next_contrib = today.replace(day=1)
+            if today.month < 12:
+                next_contrib = next_contrib.replace(month=today.month + 1)
+            else:
+                next_contrib = next_contrib.replace(year=today.year + 1, month=1)
+
+            if next_contrib <= today + timedelta(days=30):
+                events.append({
+                    "id": f"goal_{g.get('id', '')}",
+                    "date": next_contrib.isoformat(),
+                    "name": f"Savings: {g.get('name', 'Goal')}",
+                    "amount": monthly_contribution,
+                    "type": "savings",
+                    "category": "Goal",
+                })
+
         events.sort(key=lambda e: e["date"])
         return events
 

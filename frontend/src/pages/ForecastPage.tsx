@@ -131,7 +131,7 @@ export function ForecastPage() {
                 <MoneyText
                   value={event.type === "income" ? event.amount : -event.amount}
                   showSign
-                  className="text-sm"
+                  className={`text-sm ${event.type === "savings" ? "text-blue-400" : ""}`}
                 />
               </div>
             ))}

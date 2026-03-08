@@ -31,8 +31,11 @@ async def get_forecast(user=Depends(get_current_user)):
                 low = running
                 low_date = e["date"]
 
+        end_balance = running
+
         return {
             "start_balance": round(balance, 2),
+            "end_balance": round(end_balance, 2),
             "danger_threshold": 500,
             "predicted_low": round(low, 2),
             "predicted_low_date": low_date,
