@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { api } from "../lib/api";
 import { AGENTS, type AgentName } from "../types";
+import { PlaidLinkButton } from "../components/PlaidLinkButton";
 
 const STEPS = ["Welcome", "Link Bank", "Profile", "Meet Your Team"] as const;
 
@@ -140,68 +141,80 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 }
 
 function LinkBankStep({ onNext }: { onNext: () => void }) {
-  const [loading, setLoading] = useState(false);
   const [linked, setLinked] = useState(false);
   const [linkedAccounts, setLinkedAccounts] = useState<any[]>([]);
+  const [linkToken, setLinkToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSkip = () => onNext();
+  useEffect(() => {
+    api.plaid
+      .linkToken()
+      .then((d) => setLinkToken(d.link_token))
+      .catch((e) => setError(e.message));
+  }, []);
+
+  const handlePlaidSuccess = async (publicToken: string) => {
+    try {
+      await api.plaid.exchange(publicToken);
+      const accounts = await api.plaid.accounts();
+      setLinkedAccounts(accounts || []);
+      setLinked(true);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
 
   return (
-    <View className="items-center w-full">
-      <View className="w-12 h-12 rounded-2xl bg-gold/10 items-center justify-center mb-4">
+    <View style={{ alignItems: "center", width: "100%" }}>
+      <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: "#D4A85320", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
         <Feather name="link" size={24} color="#D4A853" />
       </View>
-      <Text className="text-2xl font-bold text-text-primary mb-2">
+      <Text style={{ fontSize: 22, fontWeight: "700", color: "#FAFAFA", marginBottom: 8 }}>
         Link Your Bank
       </Text>
-      <Text className="text-sm text-text-secondary text-center mb-8">
+      <Text style={{ fontSize: 14, color: "#A1A1AA", textAlign: "center", marginBottom: 32 }}>
         So your team can get to work
       </Text>
 
       {error && (
-        <View className="flex-row items-center gap-2 rounded-xl border border-danger/20 bg-danger/5 px-4 py-2 mb-4">
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 12, borderWidth: 1, borderColor: "#EF444430", backgroundColor: "#EF444410", paddingHorizontal: 16, paddingVertical: 8, marginBottom: 16 }}>
           <Feather name="alert-triangle" size={14} color="#EF4444" />
-          <Text className="text-xs text-danger flex-1">{error}</Text>
+          <Text style={{ fontSize: 12, color: "#EF4444", flex: 1 }}>{error}</Text>
         </View>
       )}
 
       {!linked ? (
-        <View className="w-full gap-3">
-          {loading ? (
-            <View className="flex-row items-center justify-center gap-2 py-4">
-              <ActivityIndicator size="small" color="#71717A" />
-              <Text className="text-sm text-text-muted">
-                Preparing secure connection...
-              </Text>
-            </View>
+        <View style={{ width: "100%", gap: 12 }}>
+          {linkToken ? (
+            <PlaidLinkButton
+              token={linkToken}
+              onSuccess={handlePlaidSuccess}
+              onExit={() => {}}
+            />
           ) : (
-            <>
-              <Text className="text-xs text-text-muted text-center mb-2">
-                Bank linking requires a native app build (EAS Build).{"\n"}
-                You can link your bank after installation.
-              </Text>
-            </>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 }}>
+              <ActivityIndicator size="small" color="#71717A" />
+              <Text style={{ fontSize: 14, color: "#71717A" }}>Preparing secure connection...</Text>
+            </View>
           )}
-          <Pressable onPress={handleSkip} className="items-center py-2">
-            <Text className="text-sm text-text-muted">
-              Skip for now — use demo data
-            </Text>
+          <Pressable onPress={onNext} style={{ alignItems: "center", paddingVertical: 8 }}>
+            <Text style={{ fontSize: 14, color: "#71717A" }}>Skip for now — use demo data</Text>
           </Pressable>
         </View>
       ) : (
-        <View className="w-full rounded-2xl border border-income/20 bg-income/5 p-4">
-          <View className="flex-row items-center justify-center gap-2 mb-3">
+        <View style={{ width: "100%", borderRadius: 16, borderWidth: 1, borderColor: "#34D39930", backgroundColor: "#34D39910", padding: 16 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 12 }}>
             <Feather name="check-circle" size={18} color="#34D399" />
-            <Text className="text-sm font-medium text-income">
-              Account linked!
-            </Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#34D399" }}>Account linked!</Text>
           </View>
-          {linkedAccounts.map((acct, i) => (
-            <Text key={i} className="text-xs text-text-secondary text-center">
+          {linkedAccounts.map((acct: any, i: number) => (
+            <Text key={i} style={{ fontSize: 12, color: "#A1A1AA", textAlign: "center" }}>
               {acct.name} • ${acct.balance_current?.toLocaleString() ?? "—"}
             </Text>
           ))}
+          <Pressable onPress={onNext} style={{ marginTop: 16, alignItems: "center", borderRadius: 9999, backgroundColor: "#D4A853", paddingVertical: 12 }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#000" }}>Continue</Text>
+          </Pressable>
         </View>
       )}
     </View>
