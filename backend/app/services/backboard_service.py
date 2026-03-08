@@ -409,18 +409,34 @@ class BackboardService:
             if status != "REQUIRES_ACTION" or not tool_calls:
                 break
 
+            def _tc_fn(tc):
+                """Extract function info from a tool call (object or dict)."""
+                if isinstance(tc, dict):
+                    fn = tc.get("function", {})
+                    return fn.get("name", ""), fn.get("arguments", "{}"), tc.get("id", "")
+                fn = getattr(tc, "function", None)
+                name = getattr(fn, "name", "") if fn else ""
+                try:
+                    args_raw = fn.parsed_arguments if fn else {}
+                except Exception:
+                    args_raw = getattr(fn, "arguments", "{}") if fn else "{}"
+                tc_id = getattr(tc, "id", "")
+                return name, args_raw, tc_id
+
             logger.info(
                 f"[CHAT] tool call round {iteration + 1}: "
-                f"{[tc.function.name for tc in tool_calls]}"
+                f"{[_tc_fn(tc)[0] for tc in tool_calls]}"
             )
 
             tool_outputs = []
             for tc in tool_calls:
-                fn_name = tc.function.name
-                try:
-                    args = tc.function.parsed_arguments
-                except Exception:
-                    args = json.loads(getattr(tc.function, "arguments", "{}"))
+                fn_name, args_raw, tc_id = _tc_fn(tc)
+                if isinstance(args_raw, dict):
+                    args = args_raw
+                elif isinstance(args_raw, str):
+                    args = json.loads(args_raw) if args_raw else {}
+                else:
+                    args = {}
 
                 logger.info(f"[TOOL] executing {fn_name}({json.dumps(args, default=str)[:200]})")
 
@@ -437,7 +453,7 @@ class BackboardService:
                     result = {"error": str(e), "tool": fn_name}
 
                 tool_outputs.append({
-                    "tool_call_id": tc.id,
+                    "tool_call_id": tc_id,
                     "output": json.dumps(result, default=str),
                 })
 
