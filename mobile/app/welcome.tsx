@@ -25,6 +25,7 @@ export default function WelcomeScreen() {
     <View className="flex-1 items-center justify-center bg-base px-8">
       <View
         className="absolute inset-0"
+        pointerEvents="none"
         style={{
           backgroundColor: "#D4A853",
           opacity: 0.03,
