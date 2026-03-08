@@ -45,6 +45,8 @@ export function BriefingPlayer({
         if (result?.audio_url) {
           setCurrentAudioUrl(result.audio_url);
           await playAudio(result.audio_url);
+        } else {
+          console.warn("[BRIEFING] No audio_url in response:", result);
         }
       } catch (err) {
         console.error("[BRIEFING] Generation failed:", err);

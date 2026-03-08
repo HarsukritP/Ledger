@@ -90,7 +90,7 @@ class BackboardService:
     async def _rest_get(self, path: str) -> dict | list:
         full_url = f"{BASE_URL}{path}"
         try:
-            async with httpx.AsyncClient(timeout=15) as http:
+            async with httpx.AsyncClient(timeout=30) as http:
                 resp = await http.get(full_url, headers={"X-API-Key": self.api_key})
                 if resp.status_code != 200:
                     logger.error(
@@ -109,7 +109,7 @@ class BackboardService:
     async def _rest_post(self, path: str, body: dict) -> dict:
         full_url = f"{BASE_URL}{path}"
         try:
-            async with httpx.AsyncClient(timeout=15) as http:
+            async with httpx.AsyncClient(timeout=30) as http:
                 resp = await http.post(
                     full_url, headers={"X-API-Key": self.api_key}, json=body
                 )
@@ -130,7 +130,7 @@ class BackboardService:
     async def _rest_delete(self, path: str) -> dict:
         full_url = f"{BASE_URL}{path}"
         try:
-            async with httpx.AsyncClient(timeout=15) as http:
+            async with httpx.AsyncClient(timeout=30) as http:
                 resp = await http.delete(full_url, headers={"X-API-Key": self.api_key})
                 if resp.status_code not in (200, 204):
                     logger.error(
@@ -827,11 +827,11 @@ class BackboardService:
         result = await self.send_message(
             user_sub=user_sub,
             message=(
-                "Generate my weekly financial briefing. Check my account summary, "
-                "review upcoming cashflow via Pulse, audit my subscriptions, check "
-                "goal progress, and flag any anomalies from Sentinel. Synthesize "
-                "everything into a warm but direct 45-second summary. Start with "
-                "the single most important thing I need to know this week."
+                "Generate a brief weekly financial summary. "
+                "First call get_account_summary and get_recurring_charges to get the data. "
+                "Then write a warm, conversational 3-4 sentence briefing covering: "
+                "current balance, any upcoming bills this week, and one actionable tip. "
+                "Keep it under 100 words. Do NOT call analyze_with_specialist — just use the raw data."
             ),
             user_name=user_name,
         )
