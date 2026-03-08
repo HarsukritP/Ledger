@@ -66,13 +66,20 @@ export default function WelcomeScreen() {
       <Pressable
         onPress={handleSignIn}
         disabled={loading}
-        className="w-full rounded-full bg-gold py-4 items-center"
+        style={{
+          width: "100%",
+          borderRadius: 9999,
+          backgroundColor: loading ? "#b8902e" : "#D4A853",
+          paddingVertical: 16,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
         {loading ? (
           <ActivityIndicator size="small" color="#000" />
         ) : (
-          <View className="flex-row items-center gap-2">
-            <Text className="text-base font-semibold text-black">Get Started</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: "#000" }}>Get Started</Text>
             <Feather name="arrow-right" size={18} color="#000" />
           </View>
         )}
