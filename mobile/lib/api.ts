@@ -62,16 +62,16 @@ export const api = {
   },
 
   forecast: {
-    get: () => request<any>("/forecast"),
-    events: () => request<any[]>("/forecast/events"),
+    get: () => request<any>("/cashflow"),
+    events: () => request<any[]>("/cashflow/events"),
   },
 
   subscriptions: {
-    list: () => request<any[]>("/subscriptions"),
-    get: (id: string) => request<any>(`/subscriptions/${id}`),
+    list: () => request<any[]>("/expenses"),
+    get: (id: string) => request<any>(`/expenses/${id}`),
     decide: (id: string, decision: string, reason?: string) =>
       request(
-        `/subscriptions/${id}/decision?decision=${decision}&reason=${reason || ""}`,
+        `/expenses/${id}/decision?decision=${decision}&reason=${reason || ""}`,
         { method: "POST" }
       ),
   },
