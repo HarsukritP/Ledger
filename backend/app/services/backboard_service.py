@@ -23,6 +23,7 @@ from app.agents.prompts import (
     AUDIT_SYSTEM_PROMPT,
     NORTH_STAR_SYSTEM_PROMPT,
     SENTINEL_SYSTEM_PROMPT,
+    RECEIPT_SCANNER_SYSTEM_PROMPT,
     COUNCIL_SYSTEM_PROMPT,
     COUNCIL_TOOLS,
 )
@@ -34,6 +35,7 @@ SPECIALIST_DEFS = {
     "audit": ("Ledger Audit", AUDIT_SYSTEM_PROMPT),
     "north_star": ("Ledger North Star", NORTH_STAR_SYSTEM_PROMPT),
     "sentinel": ("Ledger Sentinel", SENTINEL_SYSTEM_PROMPT),
+    "receipt_scanner": ("Ledger Receipt Scanner", RECEIPT_SCANNER_SYSTEM_PROMPT),
 }
 
 BASE_URL = "https://app.backboard.io/api"
@@ -160,8 +162,28 @@ class BackboardService:
         logger.info(f"Found {len(result)} existing assistants on Backboard")
         return result
 
+    async def ensure_specialist(self, key: str):
+        """Ensure a specific specialist exists, creating it if needed."""
+        if key in self._specialist_ids:
+            return
+        if key not in SPECIALIST_DEFS:
+            raise BackboardError(f"Unknown specialist: {key}")
+
+        self._require_configured()
+        client = self._get_client()
+        name, prompt = SPECIALIST_DEFS[key]
+        existing = await self._list_existing_assistants()
+
+        if name in existing:
+            self._specialist_ids[key] = existing[name]
+            logger.info(f"Found specialist {name} → {existing[name]}")
+        else:
+            asst = await client.create_assistant(name=name, system_prompt=prompt)
+            self._specialist_ids[key] = asst.assistant_id
+            logger.info(f"Created specialist {name} → {asst.assistant_id}")
+
     async def initialize(self):
-        """Create / find the 4 specialist assistants. Called lazily on first use."""
+        """Create / find the specialist assistants. Called lazily on first use."""
         if self._initialized:
             return
 

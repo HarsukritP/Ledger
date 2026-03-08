@@ -31,24 +31,7 @@ BILLING_KEYWORDS = [
     "t-mobile", "verizon", "at&t", "comcast", "xfinity",
 ]
 
-EXTRACTION_PROMPT = """Analyze these billing/receipt emails and extract ONLY recurring subscriptions or recurring charges.
-
-For each email that represents a subscription or recurring charge, extract:
-- merchant: the company name (clean human-readable name, e.g. "Netflix" not "noreply@netflix.com")
-- amount: the dollar amount charged (number only, no $ sign)
-- category: one of RENT_AND_UTILITIES, ENTERTAINMENT, GENERAL_SERVICES, PERSONAL_CARE, FOOD_AND_DRINK, TRANSPORTATION
-- frequency: monthly, weekly, annual, or one-time
-
-Rules:
-- Only include actual subscriptions or recurring charges (things that repeat).
-- Skip one-time purchases, shipping notifications, marketing emails, and promotional offers.
-- If you cannot determine the amount, omit that entry entirely.
-- Deduplicate: if multiple emails are from the same merchant, include only one entry with the most recent amount.
-
-Return ONLY a valid JSON array, no markdown, no explanation:
-[{"merchant": "...", "amount": ..., "category": "...", "frequency": "..."}, ...]
-
-If no recurring charges are found, return: []
+EXTRACTION_USER_MSG = """Extract recurring subscriptions from these emails. Return ONLY a JSON array.
 
 Emails:
 """
@@ -312,28 +295,26 @@ class EmailService:
     # ------------------------------------------------------------------
 
     async def _extract_with_llm(self, emails: list[dict]) -> list[dict]:
-        """Send a batch of emails to Backboard for LLM extraction."""
+        """Send a batch of emails to the Receipt Scanner specialist for extraction."""
         if not emails:
             return []
 
-        prompt = EXTRACTION_PROMPT
+        prompt = EXTRACTION_USER_MSG
         for i, e in enumerate(emails, 1):
             prompt += f"\n---\n{i}. From: {e['from']}\n   Subject: {e['subject']}\n   Date: {e['date']}\n   Body: {e['body']}\n"
 
         try:
             from app.services.backboard_service import backboard_service
 
-            if not backboard_service._initialized:
-                logger.info("[EMAIL] Initializing Backboard for email scan...")
-                await backboard_service.initialize()
+            await backboard_service.ensure_specialist("receipt_scanner")
 
             client = backboard_service._get_client()
-            audit_id = backboard_service._specialist_ids.get("audit")
-            if not audit_id:
-                logger.error("[EMAIL] Audit specialist not found")
+            scanner_id = backboard_service._specialist_ids.get("receipt_scanner")
+            if not scanner_id:
+                logger.error("[EMAIL] Receipt Scanner specialist not found after ensure_specialist")
                 return []
 
-            thread = await client.create_thread(audit_id)
+            thread = await client.create_thread(scanner_id)
             response = await client.add_message(
                 thread_id=thread.thread_id,
                 content=prompt,
@@ -343,12 +324,12 @@ class EmailService:
                 model_name=settings.llm_model,
             )
             raw = getattr(response, "content", "") or str(response)
-            logger.info(f"[EMAIL] LLM response: {len(raw)} chars, preview={raw[:200]}")
+            logger.info(f"[EMAIL] LLM response: {len(raw)} chars, preview={raw[:300]}")
 
             return self._parse_json_array(raw)
 
         except Exception as e:
-            logger.error(f"LLM extraction failed: {e}")
+            logger.error(f"LLM extraction failed: {e}", exc_info=True)
             return []
 
     def _parse_json_array(self, text: str) -> list[dict]:

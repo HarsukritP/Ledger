@@ -240,7 +240,15 @@ export function HomePage() {
               ? `This week: ${weekAhead.filter((e) => e.type !== "income").length} bills, ${weekAhead.filter((e) => e.type === "income").length} income.${predictedLow < 500 ? ` Watch your balance — it may dip to $${Math.round(predictedLow)}.` : ""}`
               : "Link your bank account and sync transactions to get your weekly briefing."
           }
-          duration="0:42"
+          onGenerate={async () => {
+            try {
+              const result = await api.briefing.generate();
+              return result;
+            } catch (err) {
+              console.error("[BRIEFING] Generate failed:", err);
+              return null;
+            }
+          }}
         />
       </motion.div>
     </div>
