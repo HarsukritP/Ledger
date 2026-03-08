@@ -58,7 +58,7 @@ export interface ForecastEvent {
   category?: string;
 }
 
-export interface Subscription {
+export interface Expense {
   id: string;
   name: string;
   amount: number;

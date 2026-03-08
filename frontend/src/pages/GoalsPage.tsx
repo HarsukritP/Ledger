@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, Pencil } from "lucide-react";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { MoneyText } from "../components/finance/MoneyText";
 import { GoalRing } from "../components/finance/GoalRing";
@@ -24,6 +24,38 @@ export function GoalsPage() {
   const [newTarget, setNewTarget] = useState("");
   const [newDate, setNewDate] = useState("");
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTarget, setEditTarget] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editCurrent, setEditCurrent] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = () => {
+    if (!selectedGoal) return;
+    setEditTarget(String(selectedGoal.targetAmount));
+    setEditDate(selectedGoal.targetDate || "");
+    setEditCurrent(String(selectedGoal.currentAmount));
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedGoal) return;
+    setSaving(true);
+    try {
+      await api.goals.update(selectedGoal.id, {
+        target_amount: parseFloat(editTarget) || selectedGoal.targetAmount,
+        target_date: editDate || undefined,
+        current_amount: parseFloat(editCurrent) || selectedGoal.currentAmount,
+      });
+      setEditing(false);
+      setSelectedGoal(null);
+      loadGoals();
+    } catch (err) {
+      console.error("[GOALS] Edit failed:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const loadGoals = () => {
     api.goals
@@ -283,42 +315,78 @@ export function GoalsPage() {
                   </div>
                 </GoalRing>
               </div>
-              <div className="mt-6 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Progress</span>
-                  <span className="text-text-primary">
-                    ${selectedGoal.currentAmount.toLocaleString()} / ${selectedGoal.targetAmount.toLocaleString()}
-                  </span>
+              {editing ? (
+                <div className="mt-6 space-y-3">
+                  <div>
+                    <label className="text-xs text-text-muted">Target Amount ($)</label>
+                    <input type="number" value={editTarget} onChange={(e) => setEditTarget(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary focus:border-gold/50 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-muted">Current Amount ($)</label>
+                    <input type="number" value={editCurrent} onChange={(e) => setEditCurrent(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary focus:border-gold/50 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-muted">Target Date</label>
+                    <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary focus:border-gold/50 focus:outline-none" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveEdit} disabled={saving}
+                      className="flex-1 rounded-full bg-gold py-2 text-xs font-medium text-black disabled:opacity-50">
+                      {saving ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button onClick={() => setEditing(false)}
+                      className="rounded-full border border-border px-4 py-2 text-xs text-text-muted">
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Monthly Needed</span>
-                  <span className="font-mono text-text-primary">${Math.round(selectedGoal.monthlyContribution)}/mo</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-secondary">Target Date</span>
-                  <span className="text-text-primary">
-                    {selectedGoal.targetDate
-                      ? new Date(selectedGoal.targetDate + "T12:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" })
-                      : "Not set"}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-6 rounded-xl border border-border bg-base p-4">
-                <AgentBadge agent="north-star" />
-                <p className="mt-2 text-sm text-text-secondary">
-                  {selectedGoal.feasibility === "at_risk"
-                    ? "This goal needs attention. Consider increasing monthly contributions or extending the deadline."
-                    : selectedGoal.feasibility === "behind"
-                      ? "You're falling behind on this goal. Review your spending to find areas to cut back."
-                      : "You're on pace. Keep up the current contribution rate and you'll hit this goal on time."}
-                </p>
-              </div>
-              <button
-                onClick={() => handleDelete(selectedGoal.id)}
-                className="mt-4 w-full rounded-full border border-danger/30 py-2 text-xs font-medium text-danger hover:bg-danger/5"
-              >
-                Delete Goal
-              </button>
+              ) : (
+                <>
+                  <div className="mt-6 space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-text-secondary">Progress</span>
+                      <span className="text-text-primary">
+                        ${selectedGoal.currentAmount.toLocaleString()} / ${selectedGoal.targetAmount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-text-secondary">Monthly Needed</span>
+                      <span className="font-mono text-text-primary">${Math.round(selectedGoal.monthlyContribution)}/mo</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-text-secondary">Target Date</span>
+                      <span className="text-text-primary">
+                        {selectedGoal.targetDate
+                          ? new Date(selectedGoal.targetDate + "T12:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" })
+                          : "Not set"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-6 rounded-xl border border-border bg-base p-4">
+                    <AgentBadge agent="north-star" />
+                    <p className="mt-2 text-sm text-text-secondary">
+                      {selectedGoal.feasibility === "at_risk"
+                        ? "This goal needs attention. Consider increasing monthly contributions or extending the deadline."
+                        : selectedGoal.feasibility === "behind"
+                          ? "You're falling behind on this goal. Review your spending to find areas to cut back."
+                          : "You're on pace. Keep up the current contribution rate and you'll hit this goal on time."}
+                    </p>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={startEdit}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border py-2 text-xs font-medium text-text-secondary hover:bg-surface-raised">
+                      <Pencil size={12} /> Edit Goal
+                    </button>
+                    <button onClick={() => handleDelete(selectedGoal.id)}
+                      className="flex-1 rounded-full border border-danger/30 py-2 text-xs font-medium text-danger hover:bg-danger/5">
+                      Delete Goal
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}

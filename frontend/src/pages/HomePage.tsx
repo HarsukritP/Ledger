@@ -276,6 +276,12 @@ export function HomePage() {
   );
 }
 
+const COLOR_CLASSES = {
+  gold: "mt-1 text-xl text-gold",
+  danger: "mt-1 text-xl text-danger",
+  income: "mt-1 text-xl text-income",
+} as const;
+
 function MetricCard({
   label,
   value,
@@ -290,7 +296,7 @@ function MetricCard({
   return (
     <div className="rounded-2xl border border-border bg-surface p-4">
       <p className="text-xs text-text-muted">{label}</p>
-      <MoneyText value={value} animated className={`mt-1 text-xl text-${color}`} />
+      <MoneyText value={value} animated className={COLOR_CLASSES[color]} />
       <p className="mt-1 text-xs text-text-secondary">{sub}</p>
     </div>
   );

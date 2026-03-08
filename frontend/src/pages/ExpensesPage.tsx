@@ -5,7 +5,7 @@ import { AgentBadge } from "../components/finance/AgentBadge";
 import { MoneyText } from "../components/finance/MoneyText";
 import { cn } from "../lib/utils";
 import { api } from "../lib/api";
-import type { Subscription } from "../types";
+import type { Expense } from "../types";
 
 const FILTERS = ["All", "Needs Review", "Keep", "Flagged"] as const;
 
@@ -24,7 +24,7 @@ function getCategoryLabel(cat: string): string {
 }
 
 export function ExpensesPage() {
-  const [subs, setSubs] = useState<(Subscription & { category?: string })[]>([]);
+  const [subs, setSubs] = useState<(Expense & { category?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("All");

@@ -84,6 +84,14 @@ export function OnboardingPage() {
           }).catch(console.error);
         }
       }
+
+      for (const exp of expenses.filter((e) => e.selected && e.amount > 0)) {
+        await api.expenses.create({
+          name: exp.name,
+          amount: exp.amount,
+          category: "GENERAL_SERVICES",
+        }).catch(console.error);
+      }
     } catch (err) {
       console.error("[ONBOARDING] Failed to save:", err);
     } finally {

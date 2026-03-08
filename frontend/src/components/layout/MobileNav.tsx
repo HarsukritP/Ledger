@@ -5,6 +5,7 @@ import {
   Receipt,
   Target,
   MessageCircle,
+  Settings,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
   { to: "/expenses", icon: Receipt, label: "Expenses" },
   { to: "/goals", icon: Target, label: "Goals" },
   { to: "/chat", icon: MessageCircle, label: "Chat" },
+  { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export function MobileNav() {

@@ -1,7 +1,6 @@
 """Expenses endpoints — recurring charges (bills, subscriptions, rent) from Plaid, email, or manual entry."""
 import logging
 from pydantic import BaseModel
-from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.services.data_service import data_service
