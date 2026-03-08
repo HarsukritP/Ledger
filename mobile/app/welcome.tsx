@@ -15,14 +15,17 @@ export default function WelcomeScreen() {
   const { authorize } = useAuth0();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSignIn = async () => {
     setLoading(true);
+    setError(null);
     try {
       await authorize();
       router.replace("/");
     } catch (err) {
-      console.error("[AUTH] Sign-in failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -77,6 +80,12 @@ export default function WelcomeScreen() {
           </View>
         )}
       </TouchableOpacity>
+
+      {error && (
+        <Text style={{ marginTop: 12, fontSize: 12, color: "#EF4444", textAlign: "center" }}>
+          {error}
+        </Text>
+      )}
 
       <Text style={{ marginTop: 24, fontSize: 12, color: "#71717A", textAlign: "center", lineHeight: 20 }}>
         {"Secure bank linking via Plaid.\nYour data is encrypted and never sold."}
