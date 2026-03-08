@@ -28,7 +28,7 @@
       [
         "react-native-auth0",
         {
-          "domain": "REPLACE_WITH_YOUR_AUTH0_DOMAIN"
+          "domain": "dev-rlqpb3p7hzb1ldkr.us.auth0.com"
         }
       ]
     ],
