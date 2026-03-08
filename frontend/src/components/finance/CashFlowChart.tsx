@@ -143,8 +143,8 @@ export function CashFlowChart({
       labels.push({ x: unique[i].x, label: unique[i].date });
     }
     const last = unique[unique.length - 1];
-    if (labels.length > 0 && labels[labels.length - 1].label !== last.label) {
-      labels.push({ x: last.x, label: last.label });
+    if (labels.length > 0 && labels[labels.length - 1].label !== last.date) {
+      labels.push({ x: last.x, label: last.date });
     }
     return labels;
   }, [historyPoints, forecastPoints]);
