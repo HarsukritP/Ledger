@@ -51,7 +51,7 @@ async def generate_briefing(user=Depends(get_current_user)):
     try:
         from app.services.push_service import send_to_user
         send_to_user(
-            user_sub,
+            user_db_id or user_sub,
             title="Your Ledger briefing is ready",
             body=content[:80] + ("…" if len(content) > 80 else ""),
             data={"type": "briefing"},
