@@ -54,6 +54,7 @@ export const api = {
   dashboard: {
     briefing: () => request<any>("/dashboard/briefing"),
     health: () => request<any>("/dashboard/health"),
+    categories: (days = 30) => request<any[]>(`/dashboard/categories?days=${days}`),
     action: (id: string, response: string) =>
       request(`/dashboard/action/${id}`, {
         method: "POST",
@@ -62,7 +63,7 @@ export const api = {
   },
 
   forecast: {
-    get: () => request<any>("/cashflow"),
+    get: (historyDays = 30) => request<any>(`/cashflow?history_days=${historyDays}`),
     events: () => request<any[]>("/cashflow/events"),
   },
 

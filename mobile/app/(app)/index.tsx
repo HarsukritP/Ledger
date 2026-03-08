@@ -137,6 +137,7 @@ export default function HomeScreen() {
               weekday: "long",
               month: "long",
               day: "numeric",
+              year: "numeric",
             })}
           </Text>
         </View>

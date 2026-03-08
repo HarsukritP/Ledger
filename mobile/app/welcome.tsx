@@ -54,32 +54,55 @@ export default function WelcomeScreen() {
         ))}
       </View>
 
-      <TouchableOpacity
-        onPress={handleSignIn}
-        disabled={loading}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        style={{
-          width: "100%",
-          borderRadius: 9999,
-          backgroundColor: "#D4A853",
-          paddingTop: 16,
-          paddingBottom: 16,
-          alignItems: "center",
-          justifyContent: "center",
-          opacity: loading ? 0.7 : 1,
-          ...(Platform.OS === "web" ? { cursor: "pointer" } as any : {}),
-        }}
-      >
-        {loading ? (
-          <ActivityIndicator size="small" color="#000" />
-        ) : (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: "#000" }}>Get Started</Text>
-            <Feather name="arrow-right" size={18} color="#000" />
-          </View>
-        )}
-      </TouchableOpacity>
+      <View style={{ width: "100%", gap: 12 }}>
+        <TouchableOpacity
+          onPress={handleSignIn}
+          disabled={loading}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          style={{
+            width: "100%",
+            borderRadius: 9999,
+            backgroundColor: "#D4A853",
+            paddingTop: 16,
+            paddingBottom: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: loading ? 0.7 : 1,
+            ...(Platform.OS === "web" ? { cursor: "pointer" } as any : {}),
+          }}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: "#000" }}>Get Started</Text>
+              <Feather name="arrow-right" size={18} color="#000" />
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleSignIn}
+          disabled={loading}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          style={{
+            width: "100%",
+            borderRadius: 9999,
+            borderWidth: 1,
+            borderColor: "#27272A",
+            paddingTop: 14,
+            paddingBottom: 14,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: loading ? 0.7 : 1,
+            ...(Platform.OS === "web" ? { cursor: "pointer" } as any : {}),
+          }}
+        >
+          <Text style={{ fontSize: 15, fontWeight: "500", color: "#A1A1AA" }}>Sign In</Text>
+        </TouchableOpacity>
+      </View>
 
       {error && (
         <Text style={{ marginTop: 12, fontSize: 12, color: "#EF4444", textAlign: "center" }}>

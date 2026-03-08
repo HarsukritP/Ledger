@@ -145,23 +145,31 @@ function LinkBankStep({ onNext }: { onNext: () => void }) {
   const [linked, setLinked] = useState(false);
   const [linkedAccounts, setLinkedAccounts] = useState<any[]>([]);
   const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [exchanging, setExchanging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.plaid
       .linkToken()
       .then((d) => setLinkToken(d.link_token))
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        setError("Could not initialize bank linking. You can skip for now.");
+      });
   }, []);
 
   const handlePlaidSuccess = async (publicToken: string) => {
+    setExchanging(true);
+    setError(null);
     try {
-      await api.plaid.exchange(publicToken);
+      const result = await api.plaid.exchange(publicToken);
+      setLinkedAccounts(result.accounts || []);
       setLinked(true);
       // kick off sync in background — don't block progression
       api.plaid.sync().catch(() => {});
+      setTimeout(onNext, 2000);
     } catch (e: any) {
       setError(e.message);
+      setExchanging(false);
     }
   };
 
@@ -186,12 +194,25 @@ function LinkBankStep({ onNext }: { onNext: () => void }) {
 
       {!linked ? (
         <View style={{ width: "100%", gap: 12 }}>
-          {linkToken ? (
-            <PlaidLinkButton
-              token={linkToken}
-              onSuccess={handlePlaidSuccess}
-              onExit={() => {}}
-            />
+          {exchanging ? (
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 }}>
+              <ActivityIndicator size="small" color="#71717A" />
+              <Text style={{ fontSize: 14, color: "#71717A" }}>Linking your account...</Text>
+            </View>
+          ) : linkToken ? (
+            <>
+              <PlaidLinkButton
+                token={linkToken}
+                onSuccess={handlePlaidSuccess}
+                onExit={() => {}}
+              />
+              <Text style={{ fontSize: 10, color: "#52525B", textAlign: "center" }}>
+                {"Sandbox mode — use credentials "}
+                <Text style={{ fontFamily: "monospace", color: "#71717A" }}>user_good</Text>
+                {" / "}
+                <Text style={{ fontFamily: "monospace", color: "#71717A" }}>pass_good</Text>
+              </Text>
+            </>
           ) : (
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 }}>
               <ActivityIndicator size="small" color="#71717A" />
@@ -203,11 +224,20 @@ function LinkBankStep({ onNext }: { onNext: () => void }) {
           </Pressable>
         </View>
       ) : (
-        <View style={{ width: "100%", borderRadius: 16, borderWidth: 1, borderColor: "#34D39930", backgroundColor: "#34D39910", padding: 16 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}>
-            <Feather name="check-circle" size={20} color="#34D399" />
-            <Text style={{ fontSize: 16, fontWeight: "600", color: "#34D399" }}>Bank linked successfully!</Text>
+        <View style={{ width: "100%", borderRadius: 16, borderWidth: 1, borderColor: "#34D39930", backgroundColor: "#34D39910", padding: 16, gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Feather name="check-circle" size={18} color="#34D399" />
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#34D399" }}>Account linked!</Text>
           </View>
+          {linkedAccounts.length > 0 && (
+            <View style={{ gap: 4 }}>
+              {linkedAccounts.map((acct: any, i: number) => (
+                <Text key={i} style={{ fontSize: 12, color: "#A1A1AA", textAlign: "center" }}>
+                  {acct.name} · ${acct.balance_current?.toLocaleString() ?? "—"}
+                </Text>
+              ))}
+            </View>
+          )}
           <TouchableOpacity
             onPress={onNext}
             accessibilityRole="button"
