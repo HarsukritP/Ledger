@@ -136,8 +136,7 @@ export function SettingsPage() {
 function AccountsTab() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useState(() => {
     api.plaid
@@ -147,16 +146,15 @@ function AccountsTab() {
       .finally(() => setLoading(false));
   });
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncResult(null);
+  const handleRefresh = async () => {
+    setRefreshing(true);
     try {
-      const result = await api.plaid.sync();
-      setSyncResult(`Synced: ${result.new_transactions} new, ${result.modified} modified`);
-    } catch (err: any) {
-      setSyncResult(`Sync failed: ${err.message}`);
+      const data = await api.plaid.accounts();
+      setAccounts((data as any).accounts || []);
+    } catch {
+      /* keep stale data visible */
     } finally {
-      setSyncing(false);
+      setRefreshing(false);
     }
   };
 
@@ -172,32 +170,31 @@ function AccountsTab() {
   return (
     <div className="space-y-4">
       {accounts.length > 0 ? (
-        accounts.map((acct, i) => (
-          <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-base p-4">
-            <div>
-              <p className="text-sm font-medium text-text-primary">
-                {acct.institution_name || "Bank"} — {acct.name}
-              </p>
-              <p className="text-xs text-text-muted">
-                {acct.type} &middot; ${acct.balance_current?.toLocaleString() ?? "—"}
-                {acct.stale && " (cached)"}
-              </p>
+        <>
+          {accounts.map((acct, i) => (
+            <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-base p-4">
+              <div>
+                <p className="text-sm font-medium text-text-primary">
+                  {acct.institution_name || "Bank"} — {acct.name}
+                </p>
+                <p className="text-xs text-text-muted">
+                  {acct.type} &middot; ${acct.balance_current?.toLocaleString() ?? "—"}
+                  {acct.stale && " (cached)"}
+                </p>
+              </div>
             </div>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-text-secondary hover:bg-surface-raised disabled:opacity-50"
-            >
-              {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-              Sync
-            </button>
-          </div>
-        ))
+          ))}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium text-text-secondary hover:bg-surface-raised disabled:opacity-50"
+          >
+            {refreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            Refresh Accounts
+          </button>
+        </>
       ) : (
         <p className="py-4 text-center text-sm text-text-muted">No linked accounts. Go through onboarding to link a bank.</p>
-      )}
-      {syncResult && (
-        <p className="text-xs text-text-secondary">{syncResult}</p>
       )}
     </div>
   );
@@ -206,8 +203,6 @@ function AccountsTab() {
 function SandboxTab() {
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<any>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<any>(null);
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -222,95 +217,48 @@ function SandboxTab() {
     }
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncResult(null);
-    try {
-      const result = await api.plaid.sync();
-      setSyncResult(result);
-    } catch (err: any) {
-      setSyncResult({ error: err.message });
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-sm font-semibold text-text-primary">Seed Demo Transactions</h3>
-        <p className="mt-1 text-xs text-text-muted">
-          Generate 8 weeks of realistic transaction data: biweekly paychecks, rent, subscriptions, dining, shopping, and more.
-          This replaces any existing demo transactions.
-        </p>
-        <button
-          onClick={handleSeed}
-          disabled={seeding}
-          className="mt-3 flex items-center gap-2 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black disabled:opacity-50"
-        >
-          {seeding ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Seeding...
-            </>
-          ) : (
-            <>
-              <Database size={14} />
-              Seed 8 Weeks of Data
-            </>
-          )}
-        </button>
-        {seedResult && (
-          <div className="mt-3 rounded-xl border border-border bg-base p-3">
-            {seedResult.error ? (
-              <p className="text-xs text-danger">{seedResult.error}</p>
-            ) : (
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-income" />
-                <p className="text-xs text-text-secondary">
-                  Created {seedResult.transactions_created} transactions and {seedResult.recurring_charges_created} recurring charges
-                  ({seedResult.date_range?.start} to {seedResult.date_range?.end})
-                </p>
-              </div>
-            )}
-          </div>
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold text-text-primary">Seed Demo Transactions</h3>
+      <p className="text-xs text-text-muted">
+        Generate 8 weeks of realistic transaction data: biweekly paychecks, rent, subscriptions, dining, shopping, and more.
+        This replaces any existing transactions and populates the dashboard, forecasts, and subscription views.
+      </p>
+      <button
+        onClick={handleSeed}
+        disabled={seeding}
+        className="flex items-center gap-2 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black disabled:opacity-50"
+      >
+        {seeding ? (
+          <>
+            <Loader2 size={14} className="animate-spin" />
+            Seeding...
+          </>
+        ) : (
+          <>
+            <Database size={14} />
+            Seed 8 Weeks of Data
+          </>
         )}
-      </div>
-
-      <div className="border-t border-border pt-6">
-        <h3 className="text-sm font-semibold text-text-primary">Sync from Plaid</h3>
-        <p className="mt-1 text-xs text-text-muted">
-          Pull the latest transactions from your linked Plaid Sandbox accounts.
-        </p>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="mt-3 flex items-center gap-2 rounded-full border border-border px-5 py-2 text-xs font-medium text-text-secondary hover:bg-surface-raised disabled:opacity-50"
-        >
-          {syncing ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Syncing...
-            </>
+      </button>
+      {seedResult && (
+        <div className="rounded-xl border border-border bg-base p-3">
+          {seedResult.error ? (
+            <p className="text-xs text-danger">{seedResult.error}</p>
           ) : (
-            <>
-              <RefreshCw size={14} />
-              Sync Transactions from Plaid
-            </>
-          )}
-        </button>
-        {syncResult && (
-          <div className="mt-3 rounded-xl border border-border bg-base p-3">
-            {syncResult.error ? (
-              <p className="text-xs text-danger">{syncResult.error}</p>
-            ) : (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={14} className="text-income" />
               <p className="text-xs text-text-secondary">
-                Synced: {syncResult.new_transactions} new, {syncResult.modified} modified, {syncResult.removed} removed
+                Created {seedResult.transactions_created} transactions and {seedResult.recurring_charges_created} recurring charges
+                ({seedResult.date_range?.start} to {seedResult.date_range?.end})
               </p>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
+      <p className="text-xs text-text-muted/60">
+        In production, transactions sync automatically from linked banks via Plaid webhooks.
+      </p>
     </div>
   );
 }
