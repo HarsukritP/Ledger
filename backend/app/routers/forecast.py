@@ -1,31 +1,56 @@
-from fastapi import APIRouter, Depends
+"""Forecast endpoints — next 30 days of predicted cash flow from real transaction data."""
+import logging
+from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
-from app.models import ForecastEvent
+from app.services.data_service import data_service
+
+logger = logging.getLogger("ledger.forecast")
 
 router = APIRouter(prefix="/forecast", tags=["forecast"])
-
-MOCK_EVENTS = [
-    ForecastEvent(id="1", date="2026-03-09", name="Phone bill", amount=65, type="bill", category="Bills"),
-    ForecastEvent(id="2", date="2026-03-11", name="Paycheck", amount=1600, type="income", category="Income"),
-    ForecastEvent(id="3", date="2026-03-12", name="Gym", amount=50, type="bill", category="Fitness"),
-    ForecastEvent(id="4", date="2026-03-15", name="Rent", amount=1200, type="bill", category="Housing"),
-    ForecastEvent(id="5", date="2026-03-18", name="Netflix", amount=17.99, type="bill", category="Entertainment"),
-    ForecastEvent(id="6", date="2026-03-25", name="Paycheck", amount=1600, type="income", category="Income"),
-    ForecastEvent(id="7", date="2026-03-28", name="Internet", amount=60, type="bill", category="Bills"),
-]
 
 
 @router.get("")
 async def get_forecast(user=Depends(get_current_user)):
-    return {
-        "start_balance": 2847.32,
-        "danger_threshold": 500,
-        "predicted_low": 380.33,
-        "predicted_low_date": "2026-03-12",
-        "events": [e.model_dump() for e in MOCK_EVENTS],
-    }
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    try:
+        balance = await data_service.get_total_balance(user_db_id)
+        events = data_service.get_upcoming_events(user_db_id)
+
+        running = balance
+        low = balance
+        low_date = None
+        for e in events:
+            if e["type"] == "income":
+                running += e["amount"]
+            else:
+                running -= e["amount"]
+            if running < low:
+                low = running
+                low_date = e["date"]
+
+        return {
+            "start_balance": round(balance, 2),
+            "danger_threshold": 500,
+            "predicted_low": round(low, 2),
+            "predicted_low_date": low_date,
+            "events": events,
+        }
+    except Exception as e:
+        logger.error(f"[FORECAST] get failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/events", response_model=list[ForecastEvent])
+@router.get("/events")
 async def get_events(user=Depends(get_current_user)):
-    return MOCK_EVENTS
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    try:
+        return data_service.get_upcoming_events(user_db_id)
+    except Exception as e:
+        logger.error(f"[FORECAST] events failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

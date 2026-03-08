@@ -1,68 +1,102 @@
-from fastapi import APIRouter, Depends
+"""Dashboard endpoints — health metrics, week ahead, action queue. All data from Plaid/Supabase."""
+import logging
+from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.models import DashboardBriefing, HealthMetrics, ForecastEvent, ActionItem, ActionResponse
-from app.services.demo_data import get_spending_summary, DEMO_TRANSACTIONS, DEMO_MEMORIES
+from app.services.data_service import data_service
+
+logger = logging.getLogger("ledger.dashboard")
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-MOCK_HEALTH = HealthMetrics(balance=2847.32, spent_this_month=1204.56, saved=560.0, budget_limit=2400)
 
-MOCK_WEEK = [
-    ForecastEvent(id="1", date="2026-03-09", name="Phone bill", amount=65, type="bill"),
-    ForecastEvent(id="2", date="2026-03-11", name="Paycheck", amount=1600, type="income"),
-    ForecastEvent(id="3", date="2026-03-12", name="Gym membership", amount=50, type="bill"),
-]
-
-MOCK_ACTIONS = [
-    ActionItem(
-        id="1", agent="audit", type="suggestion",
-        title="News+ subscription underused",
-        description="$12.99/mo — you read 2 articles this month",
-        amount=-12.99,
-        actions=[
-            {"label": "Keep", "variant": "ghost"},
-            {"label": "Cancel", "variant": "primary"},
-            {"label": "Remind Later", "variant": "ghost"},
-        ],
-    ),
-    ActionItem(
-        id="2", agent="pulse", type="warning",
-        title="Low balance risk Tuesday",
-        description="Balance may dip to $380. Transfer $250 from savings?",
-        amount=-250,
-        actions=[
-            {"label": "Approve Transfer", "variant": "primary"},
-            {"label": "Dismiss", "variant": "ghost"},
-        ],
-    ),
-]
-
-
-@router.get("/briefing", response_model=DashboardBriefing)
+@router.get("/briefing")
 async def get_briefing(user=Depends(get_current_user)):
-    return DashboardBriefing(
-        health=MOCK_HEALTH,
-        week_ahead=MOCK_WEEK,
-        actions=MOCK_ACTIONS,
-    )
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    try:
+        health = await data_service.get_health_metrics(user_db_id)
+        events = data_service.get_upcoming_events(user_db_id)
+        actions_raw = data_service.get_action_queue(user_db_id)
+
+        week_ahead = [
+            {
+                "id": e["id"],
+                "date": e["date"],
+                "name": e["name"],
+                "amount": e["amount"],
+                "type": e["type"],
+                "category": e.get("category"),
+            }
+            for e in events[:7]
+        ]
+
+        actions = [
+            {
+                "id": a["id"],
+                "agent": a.get("agent_source", "council"),
+                "type": a.get("type", "suggestion"),
+                "title": a.get("title", ""),
+                "description": a.get("description", ""),
+                "amount": float(a["amount"]) if a.get("amount") else None,
+                "actions": a.get("suggested_action") or [
+                    {"label": "Approve", "variant": "primary"},
+                    {"label": "Dismiss", "variant": "ghost"},
+                ],
+            }
+            for a in actions_raw
+        ]
+
+        return {
+            "health": health,
+            "week_ahead": week_ahead,
+            "actions": actions,
+        }
+    except Exception as e:
+        logger.error(f"[DASHBOARD] briefing failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/health", response_model=HealthMetrics)
+@router.get("/health")
 async def get_health(user=Depends(get_current_user)):
-    return MOCK_HEALTH
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    try:
+        return await data_service.get_health_metrics(user_db_id)
+    except Exception as e:
+        logger.error(f"[DASHBOARD] health failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/action/{action_id}")
 async def respond_to_action(action_id: str, body: ActionResponse, user=Depends(get_current_user)):
+    user_db_id = user.get("db_id")
+    from app.services.supabase_client import get_supabase
+    sb = get_supabase()
+    if sb and user_db_id:
+        try:
+            sb.table("action_queue").update({
+                "status": body.response,
+                "resolved_at": "now()",
+            }).eq("id", action_id).eq("user_id", user_db_id).execute()
+        except Exception as e:
+            logger.warning(f"[DASHBOARD] Could not update action {action_id}: {e}")
+
     return {"status": "ok", "action_id": action_id, "response": body.response}
 
 
-@router.get("/demo-summary")
-async def get_demo_summary():
-    """Get spending summary from demo data (no auth required for demo)."""
-    summary = get_spending_summary()
-    return {
-        **summary,
-        "transaction_sample": DEMO_TRANSACTIONS[:20],
-        "memories": DEMO_MEMORIES,
-    }
+@router.get("/categories")
+async def get_categories(days: int = 30, user=Depends(get_current_user)):
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    try:
+        return data_service.get_category_breakdown(user_db_id, days=days)
+    except Exception as e:
+        logger.error(f"[DASHBOARD] categories failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,64 +1,98 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
+import { Loader2 } from "lucide-react";
 import { MoneyText } from "../components/finance/MoneyText";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { ActionCard } from "../components/finance/ActionCard";
 import { BriefingPlayer } from "../components/finance/BriefingPlayer";
 import { getGreeting } from "../lib/utils";
+import { api } from "../lib/api";
 import type { ActionItem, HealthMetrics, ForecastEvent } from "../types";
-
-const MOCK_HEALTH: HealthMetrics = {
-  balance: 2847.32,
-  spentThisMonth: 1204.56,
-  saved: 560.0,
-  budgetLimit: 2400,
-};
-
-const MOCK_WEEK_AHEAD: ForecastEvent[] = [
-  { id: "1", date: "2026-03-09", name: "Phone bill", amount: 65, type: "bill" },
-  { id: "2", date: "2026-03-11", name: "Paycheck", amount: 1600, type: "income" },
-  { id: "3", date: "2026-03-12", name: "Gym membership", amount: 50, type: "bill" },
-];
-
-const MOCK_ACTIONS: ActionItem[] = [
-  {
-    id: "1",
-    agent: "audit",
-    type: "suggestion",
-    title: "News+ subscription underused",
-    description: "$12.99/mo — you read 2 articles this month",
-    amount: -12.99,
-    actions: [
-      { label: "Keep", variant: "ghost" },
-      { label: "Cancel", variant: "primary" },
-      { label: "Remind Later", variant: "ghost" },
-    ],
-  },
-  {
-    id: "2",
-    agent: "pulse",
-    type: "warning",
-    title: "Low balance risk Tuesday",
-    description: "Balance may dip to $380. Transfer $250 from savings?",
-    amount: -250,
-    actions: [
-      { label: "Approve Transfer", variant: "primary" },
-      { label: "Dismiss", variant: "ghost" },
-    ],
-  },
-];
 
 export function HomePage() {
   const { user } = useAuth0();
   const firstName = user?.given_name || user?.name?.split(" ")[0] || "there";
 
+  const [health, setHealth] = useState<HealthMetrics | null>(null);
+  const [weekAhead, setWeekAhead] = useState<ForecastEvent[]>([]);
+  const [actions, setActions] = useState<ActionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.dashboard
+      .briefing()
+      .then((data: any) => {
+        if (data.health) {
+          setHealth({
+            balance: data.health.balance,
+            spentThisMonth: data.health.spent_this_month,
+            saved: data.health.saved,
+            budgetLimit: data.health.budget_limit,
+          });
+        }
+        setWeekAhead(
+          (data.week_ahead || []).map((e: any) => ({
+            id: e.id,
+            date: e.date,
+            name: e.name,
+            amount: e.amount,
+            type: e.type,
+            category: e.category,
+          }))
+        );
+        setActions(
+          (data.actions || []).map((a: any) => ({
+            id: a.id,
+            agent: a.agent,
+            type: a.type,
+            title: a.title,
+            description: a.description,
+            amount: a.amount,
+            actions: a.actions || [],
+          }))
+        );
+      })
+      .catch((err) => {
+        console.error("[HOME] Failed to load briefing:", err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-text-muted">
+        <Loader2 size={24} className="animate-spin" />
+        <span className="ml-2 text-sm">Loading your dashboard...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-danger/20 bg-danger/5 p-6 text-center">
+        <p className="text-sm text-danger">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-3 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const predictedLow = weekAhead.reduce(
+    (bal, e) => (e.type === "income" ? bal + e.amount : bal - e.amount),
+    health?.balance ?? 0
+  );
+  const lowEvent = weekAhead.find((e) => e.type !== "income");
+
   return (
     <div className="space-y-8">
-      {/* Greeting */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-2xl font-bold tracking-tight text-text-primary">
           {getGreeting()}, {firstName}
         </h1>
@@ -72,36 +106,25 @@ export function HomePage() {
         </p>
       </motion.div>
 
-      {/* Health Metrics */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-3 gap-3"
-      >
-        <MetricCard
-          label="Balance"
-          value={MOCK_HEALTH.balance}
-          sub="checking"
-          color="gold"
-        />
-        <MetricCard
-          label="Spent This Month"
-          value={-MOCK_HEALTH.spentThisMonth}
-          sub={`of $${MOCK_HEALTH.budgetLimit.toLocaleString()} budget`}
-          color="danger"
-        />
-        <MetricCard
-          label="Saved"
-          value={MOCK_HEALTH.saved}
-          sub="on pace"
-          color="income"
-        />
-      </motion.div>
+      {health && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-3 gap-3"
+        >
+          <MetricCard label="Balance" value={health.balance} sub="checking" color="gold" />
+          <MetricCard
+            label="Spent This Month"
+            value={-health.spentThisMonth}
+            sub={`of $${health.budgetLimit.toLocaleString()} avg`}
+            color="danger"
+          />
+          <MetricCard label="Saved" value={health.saved} sub="this month" color="income" />
+        </motion.div>
+      )}
 
-      {/* Week Ahead + Action Queue */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Week Ahead */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -109,65 +132,75 @@ export function HomePage() {
           className="rounded-2xl border border-border bg-surface p-5"
         >
           <div className="mb-4 flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-text-primary">
-              Your Week Ahead
-            </h2>
+            <h2 className="text-sm font-semibold text-text-primary">Your Week Ahead</h2>
             <AgentBadge agent="pulse" />
           </div>
-          <div className="space-y-3">
-            {MOCK_WEEK_AHEAD.map((event) => (
-              <div key={event.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-text-muted w-12">
-                    {new Date(event.date).toLocaleDateString("en-US", { weekday: "short" })}
-                  </span>
-                  <span className="text-sm text-text-primary">{event.name}</span>
+          {weekAhead.length > 0 ? (
+            <div className="space-y-3">
+              {weekAhead.map((event) => (
+                <div key={event.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-12 text-xs text-text-muted">
+                      {new Date(event.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" })}
+                    </span>
+                    <span className="text-sm text-text-primary">{event.name}</span>
+                  </div>
+                  <MoneyText
+                    value={event.type === "income" ? event.amount : -event.amount}
+                    showSign
+                    className="text-sm"
+                  />
                 </div>
-                <MoneyText
-                  value={event.type === "income" ? event.amount : -event.amount}
-                  showSign
-                  className="text-sm"
-                />
-              </div>
-            ))}
-            <div className="rounded-xl border border-warning/20 bg-warning/5 p-3">
-              <p className="text-xs text-warning">
-                Balance dips to $380 on Tuesday
-              </p>
+              ))}
+              {predictedLow < 500 && lowEvent && (
+                <div className="rounded-xl border border-warning/20 bg-warning/5 p-3">
+                  <p className="text-xs text-warning">
+                    Balance could dip to ${Math.round(predictedLow).toLocaleString()}
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <p className="text-sm text-text-muted">No upcoming events detected yet. Sync more transactions to see forecasts.</p>
+          )}
         </motion.div>
 
-        {/* Action Queue */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="space-y-3"
         >
-          <h2 className="text-sm font-semibold text-text-primary">
-            Action Queue
-          </h2>
-          {MOCK_ACTIONS.map((action) => (
-            <ActionCard
-              key={action.id}
-              item={action}
-              onAction={(label) =>
-                console.log(`Action: ${label} on ${action.id}`)
-              }
-            />
-          ))}
+          <h2 className="text-sm font-semibold text-text-primary">Action Queue</h2>
+          {actions.length > 0 ? (
+            actions.map((action) => (
+              <ActionCard
+                key={action.id}
+                item={action}
+                onAction={(label) => {
+                  api.dashboard.action(action.id, label.toLowerCase()).catch(console.error);
+                }}
+              />
+            ))
+          ) : (
+            <div className="rounded-2xl border border-border bg-surface p-5 text-center">
+              <p className="text-sm text-text-muted">No pending actions. Your finances look good.</p>
+            </div>
+          )}
         </motion.div>
       </div>
 
-      {/* Weekly Briefing */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
         <BriefingPlayer
-          previewText="This week: 2 bills, 1 paycheck. Balance dips Tuesday — hold off on dining out until Wednesday..."
+          previewText={
+            weekAhead.length > 0
+              ? `This week: ${weekAhead.filter((e) => e.type !== "income").length} bills, ${weekAhead.filter((e) => e.type === "income").length} income.${predictedLow < 500 ? ` Watch your balance — it may dip to $${Math.round(predictedLow)}.` : ""}`
+              : "Link your bank account and sync transactions to get your weekly briefing."
+          }
           duration="0:42"
         />
       </motion.div>

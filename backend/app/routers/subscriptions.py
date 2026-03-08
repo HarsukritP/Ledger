@@ -1,33 +1,89 @@
-from fastapi import APIRouter, Depends
+"""Subscriptions endpoints — recurring charges detected from real Plaid transaction data."""
+import logging
+from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
-from app.models import SubscriptionOut
+from app.services.data_service import data_service
+from app.services.supabase_client import get_supabase
+
+logger = logging.getLogger("ledger.subs")
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
-MOCK_SUBS = [
-    SubscriptionOut(id="1", name="Netflix", amount=17.99, frequency="monthly", value_score=4, status="active", last_charge_date="2026-03-01", usage_estimate="~12 hours/mo"),
-    SubscriptionOut(id="2", name="Spotify", amount=11.99, frequency="monthly", value_score=5, status="active", last_charge_date="2026-03-03", usage_estimate="Daily use"),
-    SubscriptionOut(id="3", name="Apple News+", amount=12.99, frequency="monthly", value_score=1, status="flagged", last_charge_date="2026-03-02", usage_estimate="2 articles/mo"),
-    SubscriptionOut(id="4", name="Gym Membership", amount=50.0, frequency="monthly", value_score=2, status="flagged", last_charge_date="2026-03-01", usage_estimate="Last visited 6 weeks ago"),
-    SubscriptionOut(id="5", name="iCloud+", amount=2.99, frequency="monthly", value_score=4, status="active", last_charge_date="2026-02-28"),
-    SubscriptionOut(id="6", name="Adobe CC", amount=54.99, frequency="monthly", value_score=3, status="active", last_charge_date="2026-03-05", usage_estimate="~8 hours/mo"),
-    SubscriptionOut(id="7", name="YouTube Premium", amount=13.99, frequency="monthly", value_score=4, status="active", last_charge_date="2026-03-01", usage_estimate="~20 hours/mo"),
-]
 
-
-@router.get("", response_model=list[SubscriptionOut])
+@router.get("")
 async def list_subscriptions(user=Depends(get_current_user)):
-    return MOCK_SUBS
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    try:
+        recurring = data_service.get_recurring_charges(user_db_id)
+        return [
+            {
+                "id": str(r.get("id", i)),
+                "name": r.get("merchant_name", "Unknown"),
+                "amount": float(r.get("average_amount", 0)),
+                "frequency": r.get("frequency", "monthly"),
+                "value_score": r.get("value_score", 3),
+                "status": r.get("status", "active"),
+                "last_charge_date": r.get("last_charge_date", ""),
+                "usage_estimate": r.get("usage_estimate"),
+                "category": r.get("category", ""),
+            }
+            for i, r in enumerate(recurring)
+        ]
+    except Exception as e:
+        logger.error(f"[SUBS] list failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{sub_id}", response_model=SubscriptionOut)
+@router.get("/{sub_id}")
 async def get_subscription(sub_id: str, user=Depends(get_current_user)):
-    for sub in MOCK_SUBS:
-        if sub.id == sub_id:
-            return sub
-    return {"error": "not found"}
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    result = (
+        sb.table("recurring_charges")
+        .select("*")
+        .eq("id", sub_id)
+        .eq("user_id", user_db_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    r = result.data[0]
+    return {
+        "id": str(r["id"]),
+        "name": r.get("merchant_name", ""),
+        "amount": float(r.get("average_amount", 0)),
+        "frequency": r.get("frequency", "monthly"),
+        "value_score": r.get("value_score", 3),
+        "status": r.get("status", "active"),
+        "last_charge_date": r.get("last_charge_date", ""),
+        "usage_estimate": r.get("usage_estimate"),
+        "category": r.get("category", ""),
+        "price_history": r.get("price_history", []),
+    }
 
 
 @router.post("/{sub_id}/decision")
 async def decide_subscription(sub_id: str, decision: str, reason: str = "", user=Depends(get_current_user)):
+    user_db_id = user.get("db_id")
+    sb = get_supabase()
+    if sb and user_db_id:
+        try:
+            new_status = "cancelled" if decision == "cancel" else "active" if decision == "keep" else "flagged"
+            sb.table("recurring_charges").update({
+                "status": new_status,
+                "decision_reason": reason or decision,
+            }).eq("id", sub_id).eq("user_id", user_db_id).execute()
+        except Exception as e:
+            logger.warning(f"[SUBS] Could not update decision for {sub_id}: {e}")
+
     return {"status": "ok", "sub_id": sub_id, "decision": decision, "reason": reason}

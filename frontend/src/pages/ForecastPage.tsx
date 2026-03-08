@@ -1,101 +1,167 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { MoneyText } from "../components/finance/MoneyText";
 import { CashFlowChart } from "../components/finance/CashFlowChart";
+import { api } from "../lib/api";
 import type { ForecastEvent } from "../types";
 
-const MOCK_EVENTS: ForecastEvent[] = [
-  { id: "1", date: "2026-03-09", name: "Phone bill", amount: 65, type: "bill", category: "Bills" },
-  { id: "2", date: "2026-03-11", name: "Paycheck", amount: 1600, type: "income", category: "Income" },
-  { id: "3", date: "2026-03-12", name: "Gym", amount: 50, type: "bill", category: "Fitness" },
-  { id: "4", date: "2026-03-15", name: "Rent", amount: 1200, type: "bill", category: "Housing" },
-  { id: "5", date: "2026-03-18", name: "Netflix", amount: 17.99, type: "bill", category: "Entertainment" },
-  { id: "6", date: "2026-03-25", name: "Paycheck", amount: 1600, type: "income", category: "Income" },
-  { id: "7", date: "2026-03-28", name: "Internet", amount: 60, type: "bill", category: "Bills" },
-];
+interface ForecastData {
+  startBalance: number;
+  dangerThreshold: number;
+  predictedLow: number;
+  predictedLowDate: string | null;
+  events: ForecastEvent[];
+}
 
 export function ForecastPage() {
+  const [data, setData] = useState<ForecastData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.forecast
+      .get()
+      .then((raw: any) => {
+        setData({
+          startBalance: raw.start_balance,
+          dangerThreshold: raw.danger_threshold,
+          predictedLow: raw.predicted_low,
+          predictedLowDate: raw.predicted_low_date,
+          events: (raw.events || []).map((e: any) => ({
+            id: e.id,
+            date: e.date,
+            name: e.name,
+            amount: e.amount,
+            type: e.type,
+            category: e.category,
+          })),
+        });
+      })
+      .catch((err) => {
+        console.error("[FORECAST] Failed to load:", err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-text-muted">
+        <Loader2 size={24} className="animate-spin" />
+        <span className="ml-2 text-sm">Loading forecast...</span>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="rounded-2xl border border-danger/20 bg-danger/5 p-6 text-center">
+        <p className="text-sm text-danger">{error || "Failed to load forecast"}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-3 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const lowDateFormatted = data.predictedLowDate
+    ? new Date(data.predictedLowDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
+
   return (
     <div className="space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-            Next 30 Days
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Next 30 Days</h1>
           <AgentBadge agent="pulse" />
         </div>
         <div className="mt-2 flex items-baseline gap-4">
-          <MoneyText value={2847.32} animated className="text-3xl text-gold" />
-          <span className="text-sm text-warning">
-            Predicted low: $380 on Mar 12
-          </span>
+          <MoneyText value={data.startBalance} animated className="text-3xl text-gold" />
+          {data.predictedLow < data.dangerThreshold && lowDateFormatted && (
+            <span className="text-sm text-warning">
+              Predicted low: ${Math.round(data.predictedLow).toLocaleString()} on {lowDateFormatted}
+            </span>
+          )}
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <CashFlowChart
-          events={MOCK_EVENTS}
-          startBalance={2847.32}
-          dangerThreshold={500}
-        />
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="space-y-2"
-      >
-        <h2 className="text-sm font-semibold text-text-primary">Upcoming Events</h2>
-        {MOCK_EVENTS.map((event) => (
-          <div
-            key={event.id}
-            className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
+      {data.events.length > 0 ? (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
           >
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-text-muted w-16">
-                {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </span>
-              <span className="text-sm text-text-primary">{event.name}</span>
-              {event.category && (
-                <span className="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] text-text-muted">
-                  {event.category}
-                </span>
-              )}
-            </div>
-            <MoneyText
-              value={event.type === "income" ? event.amount : -event.amount}
-              showSign
-              className="text-sm"
+            <CashFlowChart
+              events={data.events}
+              startBalance={data.startBalance}
+              dangerThreshold={data.dangerThreshold}
             />
-          </div>
-        ))}
-      </motion.div>
+          </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="rounded-2xl border border-border bg-surface p-5"
-      >
-        <div className="mb-2 flex items-center gap-2">
-          <AgentBadge agent="pulse" />
-          <span className="text-sm font-medium text-text-primary">Pulse Recommends</span>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-2"
+          >
+            <h2 className="text-sm font-semibold text-text-primary">Upcoming Events</h2>
+            {data.events.map((event) => (
+              <div
+                key={event.id}
+                className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-16 text-xs text-text-muted">
+                    {new Date(event.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                  <span className="text-sm text-text-primary">{event.name}</span>
+                  {event.category && (
+                    <span className="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] text-text-muted">
+                      {event.category}
+                    </span>
+                  )}
+                </div>
+                <MoneyText
+                  value={event.type === "income" ? event.amount : -event.amount}
+                  showSign
+                  className="text-sm"
+                />
+              </div>
+            ))}
+          </motion.div>
+        </>
+      ) : (
+        <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+          <p className="text-sm text-text-muted">
+            No upcoming events detected yet. Sync your transactions to see your cash flow forecast.
+          </p>
         </div>
-        <p className="text-sm text-text-secondary">
-          Transfer $250 from savings before Tuesday to avoid the low point. Your paycheck on the 11th will bring you back above $2,000.
-        </p>
-        <button className="mt-3 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black hover:bg-gold/90">
-          Approve Transfer
-        </button>
-      </motion.div>
+      )}
+
+      {data.predictedLow < data.dangerThreshold && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-2xl border border-border bg-surface p-5"
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <AgentBadge agent="pulse" />
+            <span className="text-sm font-medium text-text-primary">Pulse Recommends</span>
+          </div>
+          <p className="text-sm text-text-secondary">
+            Your balance is projected to dip below ${data.dangerThreshold}
+            {lowDateFormatted ? ` around ${lowDateFormatted}` : ""}. Consider holding off on non-essential spending or
+            transferring funds before then.
+          </p>
+        </motion.div>
+      )}
     </div>
   );
 }
