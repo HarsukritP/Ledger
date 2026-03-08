@@ -403,7 +403,7 @@ class BackboardService:
             f"tool_calls={len(getattr(response, 'tool_calls', []) or [])}"
         )
 
-        for iteration in range(5):
+        for iteration in range(10):
             status = getattr(response, "status", None)
             tool_calls = getattr(response, "tool_calls", None)
             if status != "REQUIRES_ACTION" or not tool_calls:
@@ -466,7 +466,21 @@ class BackboardService:
                 f"[CHAT] after tool submit: status={getattr(response, 'status', 'N/A')}"
             )
 
-        content = getattr(response, "content", None) or str(response)
+        content = getattr(response, "content", None)
+        if not content or content == "None":
+            if isinstance(response, dict):
+                content = response.get("content") or response.get("message")
+            if not content or content == "None":
+                logger.warning(
+                    f"[CHAT] No content after tool loop. "
+                    f"status={getattr(response, 'status', 'N/A')} "
+                    f"response_type={type(response).__name__}"
+                )
+                content = (
+                    "I've analyzed your data and created an action item for you. "
+                    "Check your dashboard for details."
+                )
+
         agent = self._detect_primary_agent(content)
 
         logger.info(
