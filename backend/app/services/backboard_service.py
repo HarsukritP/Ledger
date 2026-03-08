@@ -113,7 +113,7 @@ class BackboardService:
                 resp = await http.post(
                     full_url, headers={"X-API-Key": self.api_key}, json=body
                 )
-                if resp.status_code != 200:
+                if resp.status_code not in (200, 201):
                     logger.error(
                         f"REST POST {path} → {resp.status_code}: {resp.text[:500]}"
                     )
