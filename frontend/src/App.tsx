@@ -39,7 +39,7 @@ function App() {
       <Routes>
         <Route path="/welcome" element={<LandingPage />} />
         <Route path="/callback" element={<CallbackPage />} />
-        <Route path="/callback/email" element={<ProtectedRoute><EmailCallbackPage /></ProtectedRoute>} />
+        <Route path="/connect/email" element={<EmailCallbackPage />} />
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/" element={<HomePage />} />

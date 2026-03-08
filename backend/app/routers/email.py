@@ -26,7 +26,7 @@ async def get_auth_url(user=Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="User not found")
     if not settings.google_client_id:
         raise HTTPException(status_code=501, detail="Google OAuth not configured")
-    redirect_uri = f"{settings.frontend_url}/callback/email"
+    redirect_uri = f"{settings.frontend_url}/connect/email"
     url = email_service.get_gmail_auth_url(db_id, redirect_uri)
     return {"auth_url": url, "redirect_uri": redirect_uri}
 
@@ -37,7 +37,7 @@ async def email_oauth_callback(code: str, user=Depends(get_current_user)):
     db_id = user.get("db_id")
     if not db_id:
         raise HTTPException(status_code=400, detail="User not found")
-    redirect_uri = f"{settings.frontend_url}/callback/email"
+    redirect_uri = f"{settings.frontend_url}/connect/email"
     try:
         result = await email_service.exchange_gmail_code(code, redirect_uri, db_id)
         return {"status": "linked", **result}
