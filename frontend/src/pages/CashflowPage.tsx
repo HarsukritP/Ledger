@@ -17,14 +17,24 @@ interface CashflowData {
   forecastEvents: ForecastEvent[];
 }
 
+const RANGES = [
+  { label: "1W", days: 7 },
+  { label: "1M", days: 30 },
+  { label: "3M", days: 90 },
+  { label: "6M", days: 180 },
+] as const;
+
 export function CashflowPage() {
   const [data, setData] = useState<CashflowData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [range, setRange] = useState(30);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     api.cashflow
-      .get(30)
+      .get(range)
       .then((raw: any) => {
         setData({
           currentBalance: raw.current_balance,
@@ -55,7 +65,7 @@ export function CashflowPage() {
         setError(err.message);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [range]);
 
   if (loading) {
     return (
@@ -103,6 +113,24 @@ export function CashflowPage() {
           )}
         </div>
       </motion.div>
+
+      {/* Time range selector */}
+      <div className="flex gap-2">
+        {RANGES.map((r) => (
+          <button
+            key={r.label}
+            onClick={() => setRange(r.days)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-xs font-medium transition-colors",
+              range === r.days
+                ? "bg-gold text-black"
+                : "border border-border text-text-secondary hover:bg-surface-raised"
+            )}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
 
       {allEvents.length > 0 ? (
         <>

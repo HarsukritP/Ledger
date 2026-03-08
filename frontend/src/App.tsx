@@ -9,6 +9,7 @@ import { ChatPage } from "./pages/ChatPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { CallbackPage } from "./pages/CallbackPage";
+import { EmailCallbackPage } from "./pages/EmailCallbackPage";
 import { LandingPage } from "./pages/LandingPage";
 import { useAuthToken } from "./hooks/useAuthToken";
 
@@ -38,6 +39,7 @@ function App() {
       <Routes>
         <Route path="/welcome" element={<LandingPage />} />
         <Route path="/callback" element={<CallbackPage />} />
+        <Route path="/callback/email" element={<ProtectedRoute><EmailCallbackPage /></ProtectedRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/" element={<HomePage />} />

@@ -11,6 +11,27 @@ interface CashFlowChartProps {
   className?: string;
 }
 
+const NICE_STEPS = [50, 100, 200, 500, 1_000, 2_000, 5_000, 10_000, 20_000, 50_000];
+
+function niceScale(rawMin: number, rawMax: number): { ticks: number[]; niceMin: number; niceMax: number } {
+  const range = rawMax - rawMin;
+  if (range <= 0) return { ticks: [rawMin], niceMin: rawMin, niceMax: rawMax };
+
+  let step = NICE_STEPS[0];
+  for (const s of NICE_STEPS) {
+    if (Math.ceil(range / s) <= 8 && Math.ceil(range / s) >= 3) {
+      step = s;
+      break;
+    }
+  }
+
+  const niceMin = Math.floor(rawMin / step) * step;
+  const niceMax = Math.ceil(rawMax / step) * step;
+  const ticks: number[] = [];
+  for (let v = niceMin; v <= niceMax; v += step) ticks.push(v);
+  return { ticks, niceMin, niceMax };
+}
+
 export function CashFlowChart({
   historyEvents = [],
   forecastEvents = [],
@@ -20,8 +41,8 @@ export function CashFlowChart({
   className,
 }: CashFlowChartProps) {
   const width = 800;
-  const height = 300;
-  const padding = { top: 20, right: 20, bottom: 30, left: 60 };
+  const height = 320;
+  const padding = { top: 20, right: 20, bottom: 45, left: 60 };
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
@@ -42,7 +63,7 @@ export function CashFlowChart({
       for (const e of sortedHistory) {
         balance += e.type === "income" ? -Math.abs(e.amount) : Math.abs(e.amount);
       }
-      let historyStart = balance;
+      const historyStart = balance;
 
       let runningBalance = historyStart;
       sortedHistory.forEach((e, i) => {
@@ -90,17 +111,43 @@ export function CashFlowChart({
     });
 
     const allVals = [...hPts.map((p) => p.y), ...fPts.map((p) => p.y)];
-    const mn = allVals.length ? Math.min(...allVals) * 0.9 : 0;
-    const mx = allVals.length ? Math.max(...allVals) * 1.1 : 1000;
+    const rawMin = allVals.length ? Math.min(...allVals) : 0;
+    const rawMax = allVals.length ? Math.max(...allVals) : 1000;
+    const { niceMin, niceMax } = niceScale(rawMin * 0.95, rawMax * 1.05);
 
     return {
       historyPoints: hPts,
       forecastPoints: fPts,
-      minVal: mn,
-      maxVal: mx,
+      minVal: niceMin,
+      maxVal: niceMax,
       todayIndex: todayIdx,
     };
   }, [historyEvents, effectiveForecast, startBalance, hasHistory]);
+
+  const yTicks = useMemo(() => niceScale(minVal, maxVal).ticks, [minVal, maxVal]);
+
+  const xDateLabels = useMemo(() => {
+    const all = [...historyPoints, ...forecastPoints];
+    if (all.length <= 1) return [];
+    const seen = new Set<string>();
+    const unique = all.filter((p) => {
+      if (seen.has(p.date)) return false;
+      seen.add(p.date);
+      return true;
+    });
+    const targetCount = Math.min(8, unique.length);
+    if (targetCount <= 0) return [];
+    const step = Math.max(1, Math.floor(unique.length / targetCount));
+    const labels: { x: number; label: string }[] = [];
+    for (let i = 0; i < unique.length; i += step) {
+      labels.push({ x: unique[i].x, label: unique[i].date });
+    }
+    const last = unique[unique.length - 1];
+    if (labels.length > 0 && labels[labels.length - 1].label !== last.label) {
+      labels.push({ x: last.x, label: last.label });
+    }
+    return labels;
+  }, [historyPoints, forecastPoints]);
 
   const toX = (pct: number) => padding.left + pct * chartW;
   const toY = (val: number) => {
@@ -128,6 +175,20 @@ export function CashFlowChart({
   return (
     <div className={className}>
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
+        {/* Horizontal gridlines */}
+        {yTicks.map((tick) => (
+          <line
+            key={`grid-${tick}`}
+            x1={padding.left}
+            y1={toY(tick)}
+            x2={padding.left + chartW}
+            y2={toY(tick)}
+            stroke="#27272A"
+            strokeWidth={0.5}
+            opacity={0.5}
+          />
+        ))}
+
         {/* Danger zone */}
         {dangerThreshold > minVal && (
           <rect
@@ -226,21 +287,31 @@ export function CashFlowChart({
           />
         ))}
 
-        {/* Y-axis labels */}
-        {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-          const val = minVal + pct * (maxVal - minVal);
-          return (
-            <text
-              key={pct}
-              x={padding.left - 8}
-              y={toY(val) + 4}
-              textAnchor="end"
-              className="fill-text-muted text-[10px] font-mono"
-            >
-              ${Math.round(val).toLocaleString()}
-            </text>
-          );
-        })}
+        {/* Y-axis labels (nice ticks) */}
+        {yTicks.map((tick) => (
+          <text
+            key={`y-${tick}`}
+            x={padding.left - 8}
+            y={toY(tick) + 4}
+            textAnchor="end"
+            className="fill-text-muted text-[10px] font-mono"
+          >
+            ${tick.toLocaleString()}
+          </text>
+        ))}
+
+        {/* X-axis date labels */}
+        {xDateLabels.map((d, i) => (
+          <text
+            key={`x-${i}`}
+            x={toX(d.x)}
+            y={padding.top + chartH + 18}
+            textAnchor="middle"
+            className="fill-text-muted text-[10px]"
+          >
+            {d.label}
+          </text>
+        ))}
       </svg>
 
       {/* Legend */}

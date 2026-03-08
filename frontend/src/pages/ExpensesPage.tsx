@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, Mail, Search } from "lucide-react";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { MoneyText } from "../components/finance/MoneyText";
 import { cn } from "../lib/utils";
@@ -29,6 +29,9 @@ export function ExpensesPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
+  const [linkingEmail, setLinkingEmail] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     api.expenses
@@ -53,7 +56,41 @@ export function ExpensesPage() {
         setError(err.message);
       })
       .finally(() => setLoading(false));
+
+    api.email.accounts().then((d: any) => setEmailAccounts(d.accounts || [])).catch(() => {});
   }, []);
+
+  const handleLinkEmail = async () => {
+    setLinkingEmail(true);
+    try {
+      const data = await api.email.authUrl();
+      window.location.href = data.auth_url;
+    } catch (err: any) {
+      console.error("[EMAIL] Failed to get auth URL:", err);
+      setLinkingEmail(false);
+    }
+  };
+
+  const handleScanEmails = async () => {
+    setScanning(true);
+    try {
+      const result = await api.email.scan();
+      if (result.detected_charges > 0) {
+        const data = await api.expenses.list();
+        setSubs(
+          data.map((s: any) => ({
+            id: s.id, name: s.name, amount: s.amount, frequency: s.frequency,
+            valueScore: s.value_score, status: s.status, lastChargeDate: s.last_charge_date,
+            usageEstimate: s.usage_estimate, category: s.category,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("[EMAIL] Scan failed:", err);
+    } finally {
+      setScanning(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -117,10 +154,46 @@ export function ExpensesPage() {
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Expenses</h1>
-          <AgentBadge agent="audit" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-text-primary">Expenses</h1>
+            <AgentBadge agent="audit" />
+          </div>
+          <div className="flex items-center gap-2">
+            {emailAccounts.length > 0 ? (
+              <button
+                onClick={handleScanEmails}
+                disabled={scanning}
+                className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-raised disabled:opacity-50"
+              >
+                {scanning ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                Scan Emails
+              </button>
+            ) : (
+              <button
+                onClick={handleLinkEmail}
+                disabled={linkingEmail}
+                className="flex items-center gap-1.5 rounded-full bg-gold px-4 py-1.5 text-xs font-medium text-black transition-colors hover:bg-gold/90 disabled:opacity-50"
+              >
+                {linkingEmail ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
+                Link Email
+              </button>
+            )}
+          </div>
         </div>
+        {emailAccounts.length > 0 && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+            <Mail size={12} className="text-blue-400" />
+            {emailAccounts.map((a: any) => a.email_address).join(", ")} linked
+            <button
+              onClick={handleLinkEmail}
+              disabled={linkingEmail}
+              className="ml-1 text-gold hover:underline"
+            >
+              + Add another
+            </button>
+          </div>
+        )}
       </motion.div>
 
       <motion.div
