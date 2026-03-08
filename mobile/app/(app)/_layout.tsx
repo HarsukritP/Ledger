@@ -3,17 +3,23 @@ import { useAuth0 } from "../../lib/use-auth";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Feather } from "@expo/vector-icons";
-import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AppLayout() {
   const { user, isLoading } = useAuth0();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace("/welcome");
     }
   }, [user, isLoading, router]);
+
+  // Use actual safe-area inset so the tab bar clears the home indicator on every
+  // platform (native iOS, native Android, and iOS Safari/PWA on web).
+  const bottomInset = insets.bottom ?? 0;
+  const TAB_HEIGHT = 56;
 
   return (
     <Tabs
@@ -23,8 +29,8 @@ export default function AppLayout() {
           backgroundColor: "#111114",
           borderTopColor: "#27272A",
           borderTopWidth: 1,
-          height: Platform.OS === "ios" ? 84 : 64,
-          paddingBottom: Platform.OS === "ios" ? 28 : 10,
+          height: TAB_HEIGHT + bottomInset,
+          paddingBottom: bottomInset > 0 ? bottomInset - 4 : 8,
           paddingTop: 8,
         },
         tabBarActiveTintColor: "#D4A853",

@@ -26,7 +26,11 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* iOS: run fullscreen (no Safari chrome) when launched from Home Screen */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+        {/*
+          black-translucent: status bar overlays the app (the app paints behind it
+          with safe-area-inset-top) — gives us a seamless dark top edge.
+        */}
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Ledger" />
 
         {/* Android PWA */}
@@ -36,14 +40,17 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
 
         <style>{`
-          html, body {
+          html, body, #root {
             background-color: #09090B;
             height: 100%;
-            overflow: hidden;
+            /* Prevent white flash on iOS rubber-band scroll */
+            overscroll-behavior: none;
           }
-          /* Fill the safe-area gap at the top/bottom with the app background */
           body {
-            padding-env: safe-area-inset-top safe-area-inset-right safe-area-inset-bottom safe-area-inset-left;
+            overflow: hidden;
+            /* Extend the dark bg behind status bar & home indicator */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            box-sizing: border-box;
           }
         `}</style>
       </head>
