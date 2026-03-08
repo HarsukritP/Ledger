@@ -32,6 +32,14 @@ function niceScale(rawMin: number, rawMax: number): { ticks: number[]; niceMin: 
   return { ticks, niceMin, niceMax };
 }
 
+function parseDate(d: string): number {
+  return new Date(d + "T12:00:00").getTime();
+}
+
+function formatDate(ts: number): string {
+  return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function CashFlowChart({
   historyEvents = [],
   forecastEvents = [],
@@ -49,66 +57,46 @@ export function CashFlowChart({
   const hasHistory = historyEvents.length > 0;
   const effectiveForecast = forecastEvents.length > 0 ? forecastEvents : (events || []);
 
-  const { historyPoints, forecastPoints, minVal, maxVal, todayIndex } = useMemo(() => {
-    const hPts: { x: number; y: number; date: string }[] = [];
-    const fPts: { x: number; y: number; date: string }[] = [];
+  const { historyPoints, forecastPoints, minVal, maxVal, timeMin, timeMax, todayTs } = useMemo(() => {
+    const hPts: { ts: number; y: number }[] = [];
+    const fPts: { ts: number; y: number }[] = [];
 
-    const totalPoints = (hasHistory ? historyEvents.length : 0) + effectiveForecast.length + 1;
+    const sortedHistory = hasHistory
+      ? [...historyEvents].sort((a, b) => parseDate(a.date) - parseDate(b.date))
+      : [];
+    const sortedForecast = [...effectiveForecast].sort(
+      (a, b) => parseDate(a.date) - parseDate(b.date)
+    );
 
-    if (hasHistory) {
+    const now = Date.now();
+
+    if (hasHistory && sortedHistory.length > 0) {
       let balance = startBalance;
-      const sortedHistory = [...historyEvents].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
       for (const e of sortedHistory) {
         balance += e.type === "income" ? -Math.abs(e.amount) : Math.abs(e.amount);
       }
-      const historyStart = balance;
 
-      let runningBalance = historyStart;
-      sortedHistory.forEach((e, i) => {
-        if (i === 0) {
-          hPts.push({
-            x: 0,
-            y: runningBalance,
-            date: new Date(e.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          });
-        }
+      let runningBalance = balance;
+      const firstTs = parseDate(sortedHistory[0].date);
+      hPts.push({ ts: firstTs, y: runningBalance });
+
+      for (const e of sortedHistory) {
         runningBalance += e.type === "income" ? Math.abs(e.amount) : -Math.abs(e.amount);
-        hPts.push({
-          x: (i + 1) / (totalPoints - 1),
-          y: runningBalance,
-          date: new Date(e.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        });
-      });
+        hPts.push({ ts: parseDate(e.date), y: runningBalance });
+      }
     }
-
-    const todayIdx = hasHistory ? historyEvents.length / (totalPoints - 1) : 0;
 
     let forecastBalance = startBalance;
-    const todayPoint = {
-      x: todayIdx,
-      y: forecastBalance,
-      date: "Today",
-    };
-    if (hasHistory) {
-      fPts.push(todayPoint);
-    } else {
-      fPts.push({ x: 0, y: forecastBalance, date: "Today" });
+    fPts.push({ ts: now, y: forecastBalance });
+
+    for (const e of sortedForecast) {
+      forecastBalance += e.type === "income" ? Math.abs(e.amount) : -Math.abs(e.amount);
+      fPts.push({ ts: parseDate(e.date), y: forecastBalance });
     }
 
-    const sortedForecast = [...effectiveForecast].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-    sortedForecast.forEach((e, i) => {
-      forecastBalance += e.type === "income" ? Math.abs(e.amount) : -Math.abs(e.amount);
-      const startIdx = hasHistory ? historyEvents.length + 1 : 1;
-      fPts.push({
-        x: (startIdx + i) / (totalPoints - 1),
-        y: forecastBalance,
-        date: new Date(e.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      });
-    });
+    const allTs = [...hPts.map((p) => p.ts), ...fPts.map((p) => p.ts)];
+    const tMin = Math.min(...allTs);
+    const tMax = Math.max(...allTs);
 
     const allVals = [...hPts.map((p) => p.y), ...fPts.map((p) => p.y)];
     const rawMin = allVals.length ? Math.min(...allVals) : 0;
@@ -120,57 +108,52 @@ export function CashFlowChart({
       forecastPoints: fPts,
       minVal: niceMin,
       maxVal: niceMax,
-      todayIndex: todayIdx,
+      timeMin: tMin,
+      timeMax: tMax,
+      todayTs: now,
     };
   }, [historyEvents, effectiveForecast, startBalance, hasHistory]);
 
   const yTicks = useMemo(() => niceScale(minVal, maxVal).ticks, [minVal, maxVal]);
 
   const xDateLabels = useMemo(() => {
-    const all = [...historyPoints, ...forecastPoints];
-    if (all.length <= 1) return [];
-    const seen = new Set<string>();
-    const unique = all.filter((p) => {
-      if (seen.has(p.date)) return false;
-      seen.add(p.date);
-      return true;
-    });
-    const targetCount = Math.min(8, unique.length);
-    if (targetCount <= 0) return [];
-    const step = Math.max(1, Math.floor(unique.length / targetCount));
-    const labels: { x: number; label: string }[] = [];
-    for (let i = 0; i < unique.length; i += step) {
-      labels.push({ x: unique[i].x, label: unique[i].date });
+    if (timeMax <= timeMin) return [];
+    const targetCount = 7;
+    const step = (timeMax - timeMin) / targetCount;
+    const labels: { ts: number; label: string }[] = [];
+    for (let i = 0; i <= targetCount; i++) {
+      const ts = timeMin + step * i;
+      labels.push({ ts, label: formatDate(ts) });
     }
-    const last = unique[unique.length - 1];
-    if (labels.length > 0 && labels[labels.length - 1].label !== last.date) {
-      labels.push({ x: last.x, label: last.date });
-    }
-    return labels;
-  }, [historyPoints, forecastPoints]);
+    // Deduplicate adjacent identical labels
+    return labels.filter((l, i) => i === 0 || l.label !== labels[i - 1].label);
+  }, [timeMin, timeMax]);
 
-  const toX = (pct: number) => padding.left + pct * chartW;
+  const toX = (ts: number) => {
+    if (timeMax === timeMin) return padding.left + chartW / 2;
+    return padding.left + ((ts - timeMin) / (timeMax - timeMin)) * chartW;
+  };
   const toY = (val: number) => {
     if (maxVal === minVal) return padding.top + chartH / 2;
     return padding.top + chartH - ((val - minVal) / (maxVal - minVal)) * chartH;
   };
 
-  const buildPath = (pts: { x: number; y: number }[]) =>
-    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${toX(p.x)} ${toY(p.y)}`).join(" ");
+  const buildPath = (pts: { ts: number; y: number }[]) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${toX(p.ts)} ${toY(p.y)}`).join(" ");
 
   const historyPath = historyPoints.length > 1 ? buildPath(historyPoints) : "";
   const forecastPath = forecastPoints.length > 1 ? buildPath(forecastPoints) : "";
 
   const forecastAreaPath = forecastPoints.length > 1
-    ? `${forecastPath} L ${toX(forecastPoints[forecastPoints.length - 1].x)} ${toY(minVal)} L ${toX(forecastPoints[0].x)} ${toY(minVal)} Z`
+    ? `${forecastPath} L ${toX(forecastPoints[forecastPoints.length - 1].ts)} ${toY(minVal)} L ${toX(forecastPoints[0].ts)} ${toY(minVal)} Z`
     : "";
 
   const historyAreaPath = historyPoints.length > 1
-    ? `${historyPath} L ${toX(historyPoints[historyPoints.length - 1].x)} ${toY(minVal)} L ${toX(historyPoints[0].x)} ${toY(minVal)} Z`
+    ? `${historyPath} L ${toX(historyPoints[historyPoints.length - 1].ts)} ${toY(minVal)} L ${toX(historyPoints[0].ts)} ${toY(minVal)} Z`
     : "";
 
   const dangerY = toY(dangerThreshold);
-  const todayX = toX(todayIndex);
+  const todayX = toX(todayTs);
 
   return (
     <div className={className}>
@@ -280,7 +263,7 @@ export function CashFlowChart({
         {forecastPoints.map((p, i) => (
           <circle
             key={`f-${i}`}
-            cx={toX(p.x)}
+            cx={toX(p.ts)}
             cy={toY(p.y)}
             r={3}
             fill={p.y < dangerThreshold ? "#EF4444" : "#D4A853"}
@@ -304,7 +287,7 @@ export function CashFlowChart({
         {xDateLabels.map((d, i) => (
           <text
             key={`x-${i}`}
-            x={toX(d.x)}
+            x={toX(d.ts)}
             y={padding.top + chartH + 18}
             textAnchor="middle"
             className="fill-text-muted text-[10px]"
