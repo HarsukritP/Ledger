@@ -12,6 +12,7 @@ import json
 import logging
 import traceback
 from datetime import date, timedelta
+from collections import defaultdict
 
 import httpx
 from backboard import BackboardClient
@@ -255,7 +256,7 @@ class BackboardService:
             raise BackboardError(f"Thread creation failed: {e}") from e
 
     async def seed_memories(self, user_sub: str):
-        """Pre-seed the Council's memory with demo financial insights."""
+        """Seed the Council's memory with real financial insights from user data."""
         if user_sub in self._memories_seeded:
             return
 
@@ -264,26 +265,103 @@ class BackboardService:
             logger.warning(f"Cannot seed memories — no Council for {user_sub}")
             return
 
-        from app.services.demo_data import DEMO_MEMORIES
+        memories = await self._build_user_memories(user_sub)
+        if not memories:
+            logger.info(f"No data to seed memories for {user_sub}")
+            self._memories_seeded.add(user_sub)
+            return
 
         success = 0
         failed = 0
-        for mem in DEMO_MEMORIES:
+        for mem in memories:
             try:
                 await self._rest_post(
                     f"/assistants/{council_id}/memories",
-                    {"content": mem["content"]},
+                    {"content": mem},
                 )
                 success += 1
             except BackboardError as e:
                 failed += 1
-                logger.error(f"Memory seed failed: {mem['content'][:60]}... → {e}")
+                logger.error(f"Memory seed failed: {mem[:60]}... → {e}")
 
         self._memories_seeded.add(user_sub)
         logger.info(
             f"Memory seeding for {user_sub}: {success} ok, {failed} failed "
-            f"out of {len(DEMO_MEMORIES)}"
+            f"out of {len(memories)}"
         )
+
+    async def _build_user_memories(self, user_sub: str) -> list[str]:
+        """Generate memory entries from the user's real transaction data."""
+        db_id = await self._resolve_db_id(user_sub)
+        if not db_id:
+            return []
+
+        from app.services.data_service import data_service
+
+        memories = []
+        try:
+            txns = data_service.get_transactions(db_id, days=90)
+            if not txns:
+                return []
+
+            income_txns = [t for t in txns if t.get("type") == "income"]
+            if income_txns:
+                income_days = defaultdict(list)
+                for t in income_txns:
+                    try:
+                        d = date.fromisoformat(t["date"])
+                        income_days[d.day].append(float(t.get("amount", 0)))
+                    except (ValueError, KeyError):
+                        pass
+                if income_days:
+                    pay_dates = sorted(income_days.keys())
+                    avg_pay = sum(sum(v) for v in income_days.values()) / sum(len(v) for v in income_days.values())
+                    merchant = income_txns[0].get("merchant_name", "employer")
+                    memories.append(
+                        f"Gets paid on the {', '.join(str(d) for d in pay_dates)} of each month. "
+                        f"Average paycheck: ${avg_pay:,.0f} from {merchant}."
+                    )
+
+            recurring = data_service.get_recurring_charges(db_id)
+            bills = [r for r in recurring if float(r.get("average_amount", 0)) >= 30]
+            if bills:
+                bill_lines = [f"{r['merchant_name']} ${float(r.get('average_amount', 0)):,.0f}" for r in bills[:6]]
+                memories.append(f"Major recurring bills: {', '.join(bill_lines)}.")
+
+            cats = defaultdict(float)
+            month_txns = data_service.get_this_month_transactions(db_id)
+            for t in month_txns:
+                if t.get("type") in ("expense", "bill"):
+                    cat = t.get("category") or "Other"
+                    cats[cat] += float(t.get("amount", 0))
+            if cats:
+                top = sorted(cats.items(), key=lambda x: x[1], reverse=True)[:3]
+                memories.append(
+                    f"This month's top spending categories: "
+                    + ", ".join(f"{c} (${a:,.0f})" for c, a in top) + "."
+                )
+
+            flagged = [r for r in recurring if r.get("value_score", 3) <= 2 or r.get("status") == "flagged"]
+            if flagged:
+                names = [r["merchant_name"] for r in flagged]
+                total = sum(float(r.get("average_amount", 0)) for r in flagged)
+                memories.append(
+                    f"Low-value/flagged subscriptions: {', '.join(names)}. "
+                    f"Potential savings: ${total:,.0f}/mo."
+                )
+
+            goals = data_service.get_goals(db_id)
+            if goals:
+                for g in goals[:3]:
+                    memories.append(
+                        f"Goal: {g['name']} — ${float(g.get('current_amount', 0)):,.0f} of "
+                        f"${float(g.get('target_amount', 0)):,.0f} by {g.get('target_date', 'no deadline')}."
+                    )
+
+        except Exception as e:
+            logger.warning(f"Could not build memories for {user_sub}: {e}")
+
+        return memories
 
     # ------------------------------------------------------------------
     # Main chat entry point — NO FALLBACKS
@@ -383,97 +461,117 @@ class BackboardService:
     # Tool execution
     # ------------------------------------------------------------------
 
+    async def _resolve_db_id(self, user_sub: str) -> str | None:
+        """Convert an Auth0 user_sub to a Supabase user UUID."""
+        from app.services.supabase_client import get_user_by_auth0_id
+        user = await get_user_by_auth0_id(user_sub)
+        return user["id"] if user else None
+
     async def _execute_tool(self, user_sub: str, fn_name: str, args: dict) -> dict:
-        from app.services.demo_data import (
-            DEMO_TRANSACTIONS,
-            DEMO_GOAL_SNAPSHOTS,
-            get_spending_summary,
-        )
+        from app.services.data_service import data_service
+
+        db_id = await self._resolve_db_id(user_sub)
+        if not db_id:
+            return {"error": "User not found in database. Please link a bank account first."}
 
         if fn_name == "get_account_summary":
-            s = get_spending_summary()
+            health = await data_service.get_health_metrics(db_id)
+            accounts = await data_service.get_accounts(db_id)
+            categories = data_service.get_category_breakdown(db_id, days=30)
+
             return {
-                "current_balance": 2847.32,
+                "current_balance": health["balance"],
                 "accounts": [
-                    {"name": "Main Checking", "balance": 2847.32, "type": "checking"}
-                ],
-                "total_income": s["total_income"],
-                "total_expenses": s["total_expenses"],
-                "net": s["net"],
-                "march_spent_so_far": s["march_spent"],
-                "top_categories": s["top_categories"],
+                    {"name": a.get("name", "Account"), "balance": a.get("balance_current", 0), "type": a.get("type", "")}
+                    for a in accounts
+                ] if accounts else [{"name": "All Accounts", "balance": health["balance"], "type": "combined"}],
+                "spent_this_month": health["spent_this_month"],
+                "saved_this_month": health["saved"],
+                "avg_monthly_spend": health["budget_limit"],
+                "top_categories": [(c["category"], c["amount"]) for c in categories[:5]],
             }
 
         if fn_name == "get_recent_transactions":
             days = args.get("days", 30)
             category = args.get("category")
-            cutoff = (date.today() - timedelta(days=days)).isoformat()
-            txns = [t for t in DEMO_TRANSACTIONS if t["date"] >= cutoff]
+            txns = data_service.get_transactions(db_id, days=days)
             if category:
                 txns = [
-                    t
-                    for t in txns
-                    if t.get("category", "").lower() == category.lower()
+                    t for t in txns
+                    if (t.get("category") or "").lower() == category.lower()
+                    or (t.get("merchant_name") or "").lower().find(category.lower()) >= 0
                 ]
-            return {"transactions": txns[:25], "total_returned": len(txns)}
+            formatted = [
+                {
+                    "date": t.get("date", ""),
+                    "merchant_name": t.get("merchant_name", ""),
+                    "amount": float(t.get("amount", 0)),
+                    "category": t.get("category", ""),
+                    "type": t.get("type", ""),
+                    "is_recurring": t.get("is_recurring", False),
+                }
+                for t in txns[:30]
+            ]
+            return {"transactions": formatted, "total_returned": len(txns)}
 
         if fn_name == "get_recurring_charges":
-            seen: dict[str, dict] = {}
-            for t in DEMO_TRANSACTIONS:
-                if t.get("is_recurring") and t["amount"] < 0:
-                    name = t["merchant_name"]
-                    if name not in seen:
-                        seen[name] = {
-                            "name": name,
-                            "monthly_amount": abs(t["amount"]),
-                            "category": t.get("category", ""),
-                            "last_charge": t["date"],
-                        }
-            charges = list(seen.values())
+            recurring = data_service.get_recurring_charges(db_id)
+            charges = [
+                {
+                    "name": r.get("merchant_name", ""),
+                    "monthly_amount": float(r.get("average_amount", 0)),
+                    "category": r.get("category", ""),
+                    "last_charge": r.get("last_charge_date", ""),
+                    "value_score": r.get("value_score", 3),
+                    "status": r.get("status", "active"),
+                }
+                for r in recurring
+            ]
             return {
                 "recurring_charges": charges,
-                "total_monthly": round(
-                    sum(c["monthly_amount"] for c in charges), 2
-                ),
+                "total_monthly": round(sum(c["monthly_amount"] for c in charges), 2),
             }
 
         if fn_name == "get_goals":
+            goals = data_service.get_goals(db_id)
+            from app.routers.goals import _enrich_goal
+            enriched = [_enrich_goal(g) for g in goals]
             return {
                 "goals": [
                     {
-                        "name": "Japan Trip",
-                        "target": 5000,
-                        "current": 1200,
-                        "deadline": "2026-12-01",
-                        "monthly_needed": 422,
-                        "feasibility": "at_risk",
-                    },
-                    {
-                        "name": "Emergency Fund",
-                        "target": 2000,
-                        "current": 1450,
-                        "deadline": "2026-06-01",
-                        "monthly_needed": 183,
-                        "feasibility": "on_track",
-                    },
-                    {
-                        "name": "New Laptop",
-                        "target": 1800,
-                        "current": 300,
-                        "deadline": "2026-09-01",
-                        "monthly_needed": 250,
-                        "feasibility": "behind",
-                    },
+                        "name": g.get("name", ""),
+                        "target": float(g.get("target_amount", 0)),
+                        "current": float(g.get("current_amount", 0)),
+                        "deadline": g.get("target_date", ""),
+                        "monthly_needed": g.get("monthly_contribution", 0),
+                        "feasibility": g.get("feasibility", "on_track"),
+                    }
+                    for g in enriched
                 ],
-                "goal_history": DEMO_GOAL_SNAPSHOTS,
             }
 
         if fn_name == "analyze_with_specialist":
             specialist = args.get("specialist", "pulse")
             context = args.get("context", "")
-            return await self._call_specialist(specialist, context)
+            return await self._call_specialist(specialist, context, user_sub)
 
         if fn_name == "create_action_item":
+            from app.services.supabase_client import get_supabase
+            sb = get_supabase()
+            if sb and db_id:
+                try:
+                    sb.table("action_queue").insert({
+                        "user_id": db_id,
+                        "agent_source": args.get("agent", "council"),
+                        "type": args.get("action_type", "suggestion"),
+                        "title": args.get("title", ""),
+                        "description": args.get("description", ""),
+                        "amount": args.get("amount"),
+                        "status": "pending",
+                    }).execute()
+                except Exception as e:
+                    logger.warning(f"Could not persist action item: {e}")
+
             logger.info(
                 f"[ACTION] created: {args.get('title')} "
                 f"(agent={args.get('agent')}, type={args.get('action_type')})"
@@ -495,7 +593,7 @@ class BackboardService:
     # Specialist delegation — NO FALLBACKS
     # ------------------------------------------------------------------
 
-    async def _call_specialist(self, specialist: str, context: str) -> dict:
+    async def _call_specialist(self, specialist: str, context: str, user_sub: str = "") -> dict:
         self._require_configured()
         client = self._get_client()
 
@@ -507,22 +605,7 @@ class BackboardService:
 
         specialist_id = self._specialist_ids[specialist]
 
-        from app.services.demo_data import DEMO_TRANSACTIONS, get_spending_summary
-
-        summary = get_spending_summary()
-
-        data_block = json.dumps(DEMO_TRANSACTIONS[:25], indent=1, default=str)
-        enriched = (
-            f"=== USER FINANCIAL SNAPSHOT ===\n"
-            f"Balance: $2,847.32\n"
-            f"Monthly income: ~$3,200\n"
-            f"Monthly expenses: ~${summary['total_expenses']:.0f}\n"
-            f"March spending so far: ${summary['march_spent']:.0f}\n"
-            f"Top categories: {summary['top_categories']}\n\n"
-            f"=== RECENT TRANSACTIONS (last 25) ===\n{data_block}\n\n"
-            f"=== ANALYSIS REQUEST ===\n{context}\n\n"
-            f"Respond with a JSON object following your output format instructions."
-        )
+        enriched = await self._build_specialist_context(context, user_sub)
 
         logger.info(
             f"[SPECIALIST] calling {specialist} (assistant={specialist_id}) "
@@ -558,6 +641,82 @@ class BackboardService:
                 f"Full response:\n{raw}"
             )
             return {"analysis": raw, "_raw_non_json": True}
+
+    async def _build_specialist_context(self, context: str, user_sub: str) -> str:
+        """Build a rich data context string for specialist agents using real user data."""
+        from app.services.data_service import data_service
+
+        db_id = await self._resolve_db_id(user_sub) if user_sub else None
+
+        if not db_id:
+            return (
+                f"=== ANALYSIS REQUEST ===\n{context}\n\n"
+                f"Note: No user financial data available. Provide general guidance.\n"
+                f"Respond with a JSON object following your output format instructions."
+            )
+
+        try:
+            health = await data_service.get_health_metrics(db_id)
+            txns = data_service.get_transactions(db_id, days=30)
+            recurring = data_service.get_recurring_charges(db_id)
+            goals = data_service.get_goals(db_id)
+            categories = data_service.get_category_breakdown(db_id, days=30)
+
+            txn_sample = [
+                {
+                    "date": t.get("date", ""),
+                    "merchant": t.get("merchant_name", ""),
+                    "amount": float(t.get("amount", 0)),
+                    "category": t.get("category", ""),
+                    "type": t.get("type", ""),
+                }
+                for t in txns[:25]
+            ]
+            data_block = json.dumps(txn_sample, indent=1, default=str)
+
+            recurring_block = json.dumps([
+                {
+                    "name": r.get("merchant_name", ""),
+                    "amount": float(r.get("average_amount", 0)),
+                    "category": r.get("category", ""),
+                    "value_score": r.get("value_score", 3),
+                    "status": r.get("status", ""),
+                }
+                for r in recurring
+            ], indent=1, default=str)
+
+            goals_block = json.dumps([
+                {
+                    "name": g.get("name", ""),
+                    "target": float(g.get("target_amount", 0)),
+                    "current": float(g.get("current_amount", 0)),
+                    "deadline": g.get("target_date", ""),
+                }
+                for g in goals
+            ], indent=1, default=str) if goals else "No goals set."
+
+            cat_lines = ", ".join(f"{c['category']}: ${c['amount']:,.0f}" for c in categories[:5])
+
+            return (
+                f"=== USER FINANCIAL SNAPSHOT ===\n"
+                f"Balance: ${health['balance']:,.2f}\n"
+                f"Spent this month: ${health['spent_this_month']:,.2f}\n"
+                f"Saved this month: ${health['saved']:,.2f}\n"
+                f"Avg monthly spend: ${health['budget_limit']:,.0f}\n"
+                f"Top categories: {cat_lines}\n\n"
+                f"=== RECURRING CHARGES ===\n{recurring_block}\n\n"
+                f"=== GOALS ===\n{goals_block}\n\n"
+                f"=== RECENT TRANSACTIONS (last 25) ===\n{data_block}\n\n"
+                f"=== ANALYSIS REQUEST ===\n{context}\n\n"
+                f"Respond with a JSON object following your output format instructions."
+            )
+        except Exception as e:
+            logger.warning(f"Could not build specialist context: {e}")
+            return (
+                f"=== ANALYSIS REQUEST ===\n{context}\n\n"
+                f"Note: Error loading user data: {e}. Provide best guidance possible.\n"
+                f"Respond with a JSON object following your output format instructions."
+            )
 
     # ------------------------------------------------------------------
     # Briefing generation
