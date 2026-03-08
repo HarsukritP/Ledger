@@ -21,6 +21,23 @@ class DataService:
     # ── Accounts & Balances ───────────────────────────────────
 
     async def get_total_balance(self, user_db_id: str) -> float:
+        """Derive balance from transaction history (income - expenses).
+
+        Falls back to Plaid live balance only when there are no
+        transactions in Supabase at all (e.g. fresh account before seeding).
+        """
+        all_txns = self.get_transactions(user_db_id, days=365)
+        if all_txns:
+            income = sum(
+                float(t.get("amount", 0))
+                for t in all_txns if t.get("type") == "income"
+            )
+            expenses = sum(
+                float(t.get("amount", 0))
+                for t in all_txns if t.get("type") in ("expense", "bill")
+            )
+            return income - expenses
+
         try:
             accounts = await plaid_service.get_accounts_for_user(user_db_id)
             return sum(a.get("balance_current") or 0 for a in accounts)
