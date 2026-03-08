@@ -10,21 +10,56 @@ import { AGENTS, type AgentName } from "../types";
 
 const STEPS = ["Welcome", "Link Bank", "Profile", "Meet Your Team"] as const;
 
+interface ProfileData {
+  rent: string;
+  goalName: string;
+  goalAmount: string;
+  style: "brief" | "detailed";
+  frequency: "daily" | "weekly";
+}
+
 export function OnboardingPage() {
   const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [profileData, setProfileData] = useState<ProfileData>({
+    rent: "",
+    goalName: "",
+    goalAmount: "",
+    style: "brief",
+    frequency: "weekly",
+  });
   const navigate = useNavigate();
+
+  const finishOnboarding = async () => {
+    setSaving(true);
+    try {
+      const rentNum = parseFloat(profileData.rent.replace(/[^0-9.]/g, ""));
+      const goalAmtNum = parseFloat(profileData.goalAmount.replace(/[^0-9.]/g, ""));
+
+      await api.auth.completeOnboarding({
+        rent: isNaN(rentNum) ? undefined : rentNum,
+        goal_name: profileData.goalName || undefined,
+        goal_amount: isNaN(goalAmtNum) ? undefined : goalAmtNum,
+        communication_style: profileData.style,
+        briefing_frequency: profileData.frequency,
+      });
+    } catch (err) {
+      console.error("[ONBOARDING] Failed to save onboarding data:", err);
+    } finally {
+      setSaving(false);
+      navigate("/");
+    }
+  };
 
   const next = () => {
     if (step < 3) setStep(step + 1);
-    else navigate("/");
+    else finishOnboarding();
   };
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-base px-4">
-      {/* Subtle background gradient */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,#D4A85308_0%,transparent_70%)]" />
 
-      {/* Stepper */}
       <div className="relative mb-12 flex items-center gap-2">
         {STEPS.map((label, i) => (
           <div key={label} className="flex items-center gap-2">
@@ -50,7 +85,6 @@ export function OnboardingPage() {
         ))}
       </div>
 
-      {/* Step Content */}
       <AnimatePresence mode="wait">
         <motion.div
           key={step}
@@ -62,8 +96,14 @@ export function OnboardingPage() {
         >
           {step === 0 && <WelcomeStep onNext={next} />}
           {step === 1 && <LinkBankStep onNext={next} />}
-          {step === 2 && <ProfileStep onNext={next} />}
-          {step === 3 && <MeetTeamStep onNext={next} />}
+          {step === 2 && (
+            <ProfileStep
+              onNext={next}
+              profileData={profileData}
+              setProfileData={setProfileData}
+            />
+          )}
+          {step === 3 && <MeetTeamStep onNext={next} saving={saving} />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -241,13 +281,16 @@ function LinkBankStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-function ProfileStep({ onNext }: { onNext: () => void }) {
+function ProfileStep({
+  onNext,
+  profileData,
+  setProfileData,
+}: {
+  onNext: () => void;
+  profileData: ProfileData;
+  setProfileData: React.Dispatch<React.SetStateAction<ProfileData>>;
+}) {
   const [subStep, setSubStep] = useState(0);
-  const [rent, setRent] = useState("");
-  const [goalName, setGoalName] = useState("");
-  const [goalAmount, setGoalAmount] = useState("");
-  const [style, setStyle] = useState<"brief" | "detailed">("brief");
-  const [frequency, setFrequency] = useState<"daily" | "weekly">("weekly");
 
   const nextSub = () => {
     if (subStep < 2) setSubStep(subStep + 1);
@@ -273,8 +316,8 @@ function ProfileStep({ onNext }: { onNext: () => void }) {
               <p className="text-sm text-text-secondary">What's your monthly rent or housing cost?</p>
               <input
                 type="text"
-                value={rent}
-                onChange={(e) => setRent(e.target.value)}
+                value={profileData.rent}
+                onChange={(e) => setProfileData((d) => ({ ...d, rent: e.target.value }))}
                 placeholder="$1,200"
                 className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-center font-mono text-lg text-text-primary placeholder:text-text-muted focus:border-gold/50 focus:outline-none"
               />
@@ -289,12 +332,12 @@ function ProfileStep({ onNext }: { onNext: () => void }) {
                   <button
                     key={suggestion}
                     onClick={() => {
-                      setGoalName(suggestion);
-                      setGoalAmount(suggestion === "Emergency Fund" ? "2000" : suggestion === "Vacation" ? "5000" : "1800");
+                      const amt = suggestion === "Emergency Fund" ? "2000" : suggestion === "Vacation" ? "5000" : "1800";
+                      setProfileData((d) => ({ ...d, goalName: suggestion, goalAmount: amt }));
                     }}
                     className={cn(
                       "rounded-full px-3 py-1.5 text-xs transition-colors",
-                      goalName === suggestion
+                      profileData.goalName === suggestion
                         ? "bg-gold text-black"
                         : "border border-border text-text-secondary hover:bg-surface-raised"
                     )}
@@ -305,15 +348,15 @@ function ProfileStep({ onNext }: { onNext: () => void }) {
               </div>
               <input
                 type="text"
-                value={goalName}
-                onChange={(e) => setGoalName(e.target.value)}
+                value={profileData.goalName}
+                onChange={(e) => setProfileData((d) => ({ ...d, goalName: e.target.value }))}
                 placeholder="Goal name"
                 className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-gold/50 focus:outline-none"
               />
               <input
                 type="text"
-                value={goalAmount}
-                onChange={(e) => setGoalAmount(e.target.value)}
+                value={profileData.goalAmount}
+                onChange={(e) => setProfileData((d) => ({ ...d, goalAmount: e.target.value }))}
                 placeholder="$5,000"
                 className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-center font-mono text-text-primary placeholder:text-text-muted focus:border-gold/50 focus:outline-none"
               />
@@ -328,14 +371,14 @@ function ProfileStep({ onNext }: { onNext: () => void }) {
                 <ToggleGroup
                   label="Style"
                   options={["brief", "detailed"]}
-                  value={style}
-                  onChange={(v) => setStyle(v as "brief" | "detailed")}
+                  value={profileData.style}
+                  onChange={(v) => setProfileData((d) => ({ ...d, style: v as "brief" | "detailed" }))}
                 />
                 <ToggleGroup
                   label="Frequency"
                   options={["daily", "weekly"]}
-                  value={frequency}
-                  onChange={(v) => setFrequency(v as "daily" | "weekly")}
+                  value={profileData.frequency}
+                  onChange={(v) => setProfileData((d) => ({ ...d, frequency: v as "daily" | "weekly" }))}
                 />
               </div>
             </div>
@@ -387,7 +430,7 @@ function ToggleGroup({
   );
 }
 
-function MeetTeamStep({ onNext }: { onNext: () => void }) {
+function MeetTeamStep({ onNext, saving }: { onNext: () => void; saving: boolean }) {
   const agents: { name: AgentName; icon: typeof Users }[] = [
     { name: "pulse", icon: Users },
     { name: "audit", icon: Users },
@@ -438,9 +481,17 @@ function MeetTeamStep({ onNext }: { onNext: () => void }) {
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
         onClick={onNext}
-        className="mt-8 rounded-full bg-gold px-8 py-2.5 text-sm font-medium text-black hover:bg-gold/90"
+        disabled={saving}
+        className="mt-8 inline-flex items-center gap-2 rounded-full bg-gold px-8 py-2.5 text-sm font-medium text-black hover:bg-gold/90 disabled:opacity-60"
       >
-        Your team is ready. Let's go.
+        {saving ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            Setting up...
+          </>
+        ) : (
+          "Your team is ready. Let's go."
+        )}
       </motion.button>
     </div>
   );

@@ -34,7 +34,18 @@ export const api = {
   health: () => request<{ status: string }>("/health"),
 
   auth: {
-    me: () => request<{ sub: string; email: string; name: string }>("/auth/me"),
+    me: () => request<{ sub: string; email: string; name: string; onboarding_completed: boolean }>("/auth/me"),
+    completeOnboarding: (data: {
+      rent?: number;
+      goal_name?: string;
+      goal_amount?: number;
+      communication_style: string;
+      briefing_frequency: string;
+    }) =>
+      request<{ status: string; onboarding_completed: boolean }>("/auth/onboarding-complete", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
 
   dashboard: {

@@ -100,3 +100,11 @@ class UserPreferences(BaseModel):
 class ActionResponse(BaseModel):
     action_id: str
     response: str  # approved, dismissed, snoozed
+
+
+class OnboardingCompleteRequest(BaseModel):
+    rent: Optional[float] = None
+    goal_name: Optional[str] = None
+    goal_amount: Optional[float] = None
+    communication_style: str = "brief"
+    briefing_frequency: str = "weekly"

@@ -38,3 +38,15 @@ async def get_user_by_auth0_id(auth0_id: str) -> dict | None:
         return None
     result = sb.table("users").select("*").eq("auth0_id", auth0_id).execute()
     return result.data[0] if result.data else None
+
+
+async def mark_onboarding_complete(user_db_id: str, preferences: dict | None = None) -> dict | None:
+    """Set onboarding_completed=true and optionally update preferences."""
+    sb = get_supabase()
+    if not sb:
+        return None
+    update_data: dict = {"onboarding_completed": True}
+    if preferences:
+        update_data["preferences"] = preferences
+    result = sb.table("users").update(update_data).eq("id", user_db_id).execute()
+    return result.data[0] if result.data else None
