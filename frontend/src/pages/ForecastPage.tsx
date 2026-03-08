@@ -5,6 +5,7 @@ import { AgentBadge } from "../components/finance/AgentBadge";
 import { MoneyText } from "../components/finance/MoneyText";
 import { CashFlowChart } from "../components/finance/CashFlowChart";
 import { api } from "../lib/api";
+import { cn } from "../lib/utils";
 import type { ForecastEvent } from "../types";
 
 interface ForecastData {
@@ -112,29 +113,43 @@ export function ForecastPage() {
             className="space-y-2"
           >
             <h2 className="text-sm font-semibold text-text-primary">Upcoming Events</h2>
-            {data.events.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="w-16 text-xs text-text-muted">
-                    {new Date(event.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                  <span className="text-sm text-text-primary">{event.name}</span>
-                  {event.category && (
-                    <span className="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] text-text-muted">
-                      {event.category}
-                    </span>
+            {data.events.map((event) => {
+              const isSavings = event.type === "savings";
+              return (
+                <div
+                  key={event.id}
+                  className={cn(
+                    "flex items-center justify-between rounded-xl border px-4 py-3",
+                    isSavings
+                      ? "border-blue-500/30 bg-blue-500/5"
+                      : "border-border bg-surface"
                   )}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-16 text-xs text-text-muted">
+                      {new Date(event.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                    <span className={cn("text-sm", isSavings ? "text-blue-300" : "text-text-primary")}>
+                      {event.name}
+                    </span>
+                    {event.category && (
+                      <span className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px]",
+                        isSavings ? "bg-blue-500/15 text-blue-300" : "bg-surface-raised text-text-muted"
+                      )}>
+                        {event.category}
+                      </span>
+                    )}
+                  </div>
+                  <span className={cn(
+                    "font-mono text-sm",
+                    isSavings ? "text-blue-400" : event.type === "income" ? "text-income" : "text-danger"
+                  )}>
+                    {event.type === "income" ? "+" : "-"}${Math.abs(event.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
-                <MoneyText
-                  value={event.type === "income" ? event.amount : -event.amount}
-                  showSign
-                  className={`text-sm ${event.type === "savings" ? "text-blue-400" : ""}`}
-                />
-              </div>
-            ))}
+              );
+            })}
           </motion.div>
         </>
       ) : (
