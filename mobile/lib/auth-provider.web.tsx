@@ -3,6 +3,7 @@ import { PropsWithChildren } from "react";
 
 const domain = process.env.EXPO_PUBLIC_AUTH0_DOMAIN ?? "";
 const clientId = process.env.EXPO_PUBLIC_AUTH0_CLIENT_ID ?? "";
+const audience = `https://${domain}/api/v2/`;
 
 export function Auth0Provider({ children }: PropsWithChildren) {
   const redirectUri =
@@ -14,7 +15,7 @@ export function Auth0Provider({ children }: PropsWithChildren) {
     <WebProvider
       domain={domain}
       clientId={clientId}
-      authorizationParams={{ redirect_uri: redirectUri }}
+      authorizationParams={{ redirect_uri: redirectUri, audience }}
     >
       {children}
     </WebProvider>
