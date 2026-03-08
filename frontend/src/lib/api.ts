@@ -79,6 +79,7 @@ export const api = {
         body: JSON.stringify({ message }),
       }),
     history: () => request<any[]>("/chat/history"),
+    clear: () => request<any>("/chat/history", { method: "DELETE" }),
   },
 
   briefing: {

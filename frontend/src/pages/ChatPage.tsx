@@ -5,8 +5,6 @@ import { AgentBadge } from "../components/finance/AgentBadge";
 import { api } from "../lib/api";
 import type { AgentName } from "../types";
 
-const STORAGE_KEY = "ledger_chat_messages";
-
 interface Message {
   id: string;
   role: "user" | "agent" | "error";
@@ -34,26 +32,12 @@ function mapAgent(backend: string | undefined): AgentName | undefined {
   return map[backend] ?? "pulse";
 }
 
-function loadCached(): Message[] {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCached(msgs: Message[]) {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(msgs));
-  } catch { /* quota exceeded — ignore */ }
-}
-
 export function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>(loadCached);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,20 +45,13 @@ export function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    saveCached(messages);
-  }, [messages]);
-
-  useEffect(() => {
-    if (historyLoaded) return;
-    setHistoryLoaded(true);
-    if (messages.length > 0) return;
     api.chat
       .history()
       .then((history) => {
         if (!history || history.length === 0) return;
         const mapped: Message[] = history.map((h: any) => ({
           id: h.id,
-          role: h.role === "agent" ? "agent" : "user",
+          role: h.role === "agent" ? "agent" : h.role === "error" ? "error" : "user",
           agent: mapAgent(h.agent),
           text: h.text,
         }));
@@ -82,12 +59,20 @@ export function ChatPage() {
       })
       .catch((err) => {
         console.error("Failed to load chat history:", err);
-      });
-  }, [historyLoaded]);
+      })
+      .finally(() => setHistoryLoading(false));
+  }, []);
 
-  const clearChat = useCallback(() => {
-    setMessages([]);
-    sessionStorage.removeItem(STORAGE_KEY);
+  const clearChat = useCallback(async () => {
+    setClearing(true);
+    try {
+      await api.chat.clear();
+      setMessages([]);
+    } catch (err) {
+      console.error("Failed to clear chat:", err);
+    } finally {
+      setClearing(false);
+    }
   }, []);
 
   const send = async (text: string) => {
@@ -138,15 +123,23 @@ export function ChatPage() {
         {messages.length > 0 && (
           <button
             onClick={clearChat}
-            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-danger/30 hover:text-danger"
+            disabled={clearing}
+            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-danger/30 hover:text-danger disabled:opacity-50"
           >
-            <Trash2 size={12} />
+            {clearing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
             Clear
           </button>
         )}
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto pr-2">
+        {historyLoading && (
+          <div className="flex items-center justify-center py-8 text-text-muted">
+            <Loader2 size={16} className="animate-spin" />
+            <span className="ml-2 text-sm">Loading conversation...</span>
+          </div>
+        )}
+
         {messages.map((msg) => (
           <motion.div
             key={msg.id}
