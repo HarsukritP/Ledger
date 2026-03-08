@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Link2, Shield, Bell, Info, LogOut, Database, Loader2, CheckCircle2, RefreshCw, Download, Trash2, Mail, Building2, Search } from "lucide-react";
@@ -18,9 +19,33 @@ type Tab = (typeof TABS)[number]["id"];
 export function SettingsPage() {
   const { logout, user } = useAuth0();
   const [tab, setTab] = useState<Tab>("accounts");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const emailLinked = searchParams.get("email_linked");
+  const emailError = searchParams.get("email_error");
+
+  useEffect(() => {
+    if (emailLinked || emailError) {
+      const timer = setTimeout(() => {
+        setSearchParams({}, { replace: true });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [emailLinked, emailError, setSearchParams]);
 
   return (
     <div className="space-y-6">
+      {emailLinked && (
+        <div className="flex items-center gap-2 rounded-xl border border-income/20 bg-income/5 px-4 py-3">
+          <CheckCircle2 size={16} className="text-income" />
+          <p className="text-sm text-income">Gmail account {emailLinked} linked successfully!</p>
+        </div>
+      )}
+      {emailError && (
+        <div className="flex items-center gap-2 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3">
+          <p className="text-sm text-danger">Failed to link email: {emailError}</p>
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
