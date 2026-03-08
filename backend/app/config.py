@@ -20,6 +20,8 @@ class Settings:
     plaid_env: str = os.getenv("PLAID_ENV", "sandbox")
 
     backboard_api_key: str = os.getenv("BACKBOARD_API_KEY", "")
+    llm_provider: str = os.getenv("LLM_PROVIDER", "openai")
+    llm_model: str = os.getenv("LLM_MODEL", "o4-mini")
 
     elevenlabs_api_key: str = os.getenv("ELEVENLABS_API_KEY", "")
 

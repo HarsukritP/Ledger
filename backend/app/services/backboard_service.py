@@ -395,6 +395,8 @@ class BackboardService:
             content=message,
             memory="Auto",
             stream=False,
+            llm_provider=settings.llm_provider,
+            model_name=settings.llm_model,
         )
         logger.info(
             f"[CHAT] initial response status={getattr(response, 'status', 'N/A')} "
@@ -618,6 +620,8 @@ class BackboardService:
             content=enriched,
             memory="off",
             stream=False,
+            llm_provider=settings.llm_provider,
+            model_name=settings.llm_model,
         )
         raw = getattr(response, "content", "") or str(response)
 
