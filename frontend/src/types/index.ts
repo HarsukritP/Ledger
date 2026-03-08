@@ -54,7 +54,7 @@ export interface ForecastEvent {
   date: string;
   name: string;
   amount: number;
-  type: "income" | "bill" | "expense";
+  type: "income" | "bill" | "expense" | "savings";
   category?: string;
 }
 
