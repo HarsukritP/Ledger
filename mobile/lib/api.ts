@@ -125,6 +125,13 @@ export const api = {
       }),
   },
 
+  email: {
+    accounts: () => request<any>("/email/accounts"),
+    authUrl: () => request<any>("/email/auth-url"),
+    scan: () => request<any>("/email/scan", { method: "POST" }),
+    unlink: (id: string) => request<any>(`/email/accounts/${id}`, { method: "DELETE" }),
+  },
+
   settings: {
     get: () => request<any>("/settings"),
     update: (prefs: any) =>
@@ -132,8 +139,10 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify(prefs),
       }),
+    memories: () => request<any>("/settings/memories"),
     deleteMemory: (id: string) =>
       request(`/settings/memory/${id}`, { method: "DELETE" }),
-    export: () => request("/settings/export", { method: "POST" }),
+    export: () => request<any>("/settings/export", { method: "POST" }),
+    deleteAccount: () => request("/settings/account", { method: "DELETE" }),
   },
 };

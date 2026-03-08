@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -96,27 +96,59 @@ export default function SettingsScreen() {
 }
 
 function AccountsTab() {
-  const [accounts, setAccounts] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [linkingEmail, setLinkingEmail] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
-  useState(() => {
-    api.plaid
-      .accounts()
-      .then((data: any) => setAccounts(data.accounts || []))
-      .catch(() => setAccounts([]))
-      .finally(() => setLoading(false));
-  });
+  useEffect(() => {
+    Promise.all([
+      api.plaid.accounts().then((data: any) => setBankAccounts(data.accounts || [])).catch(() => {}),
+      api.email.accounts().then((data: any) => setEmailAccounts(data.accounts || [])).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       const data: any = await api.plaid.accounts();
-      setAccounts(data.accounts || []);
-    } catch {
-      /* keep stale data */
+      setBankAccounts(data.accounts || []);
+    } catch { /* keep stale */ }
+    finally { setRefreshing(false); }
+  };
+
+  const handleLinkEmail = async () => {
+    setLinkingEmail(true);
+    try {
+      const data = await api.email.authUrl();
+      if (typeof window !== "undefined") {
+        window.location.href = data.auth_url;
+      }
+    } catch (err) {
+      console.error("[EMAIL] Auth URL failed:", err);
+      setLinkingEmail(false);
+    }
+  };
+
+  const handleScanEmails = async () => {
+    setScanning(true);
+    try {
+      await api.email.scan();
+    } catch (err) {
+      console.error("[EMAIL] Scan failed:", err);
     } finally {
-      setRefreshing(false);
+      setScanning(false);
+    }
+  };
+
+  const handleUnlinkEmail = async (id: string) => {
+    try {
+      await api.email.unlink(id);
+      setEmailAccounts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.error("[EMAIL] Unlink failed:", err);
     }
   };
 
@@ -130,66 +162,191 @@ function AccountsTab() {
   }
 
   return (
-    <View className="gap-3">
-      {accounts.length > 0 ? (
-        <>
-          {accounts.map((acct, i) => (
-            <View
-              key={i}
-              className="rounded-xl border border-border bg-base p-4"
+    <View className="gap-5">
+      {/* Bank Accounts */}
+      <View className="gap-3">
+        <View className="flex-row items-center gap-2">
+          <Feather name="briefcase" size={14} color="#71717A" />
+          <Text className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            Bank Accounts
+          </Text>
+        </View>
+        {bankAccounts.length > 0 ? (
+          <>
+            {bankAccounts.map((acct, i) => (
+              <View key={i} className="flex-row items-center gap-3 rounded-xl border border-border bg-base p-4">
+                <Feather name="credit-card" size={16} color="#D4A853" />
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-text-primary">
+                    {acct.institution_name || "Bank"} — {acct.name}
+                  </Text>
+                  <Text className="text-xs text-text-muted mt-0.5">
+                    {acct.type} · ${acct.balance_current?.toLocaleString() ?? "—"}
+                    {acct.stale ? " (cached)" : ""}
+                  </Text>
+                </View>
+              </View>
+            ))}
+            <Pressable
+              onPress={handleRefresh}
+              disabled={refreshing}
+              className="flex-row items-center gap-2 rounded-full border border-border px-4 py-2 self-start"
+              style={{ opacity: refreshing ? 0.5 : 1 }}
             >
-              <Text className="text-sm font-medium text-text-primary">
-                {acct.institution_name || "Bank"} — {acct.name}
+              {refreshing ? (
+                <ActivityIndicator size={12} color="#71717A" />
+              ) : (
+                <Feather name="refresh-cw" size={12} color="#71717A" />
+              )}
+              <Text className="text-xs font-medium text-text-secondary">
+                Refresh Accounts
               </Text>
-              <Text className="text-xs text-text-muted mt-0.5">
-                {acct.type} · $
-                {acct.balance_current?.toLocaleString() ?? "—"}
-                {acct.stale ? " (cached)" : ""}
+            </Pressable>
+          </>
+        ) : (
+          <Text className="text-sm text-text-muted">
+            No bank accounts linked. Go through onboarding to link a bank.
+          </Text>
+        )}
+      </View>
+
+      {/* Email Accounts */}
+      <View className="gap-3">
+        <View className="flex-row items-center gap-2">
+          <Feather name="mail" size={14} color="#71717A" />
+          <Text className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            Email Accounts
+          </Text>
+        </View>
+        {emailAccounts.length > 0 ? (
+          <>
+            {emailAccounts.map((acct) => (
+              <View key={acct.id} className="flex-row items-center justify-between rounded-xl border border-border bg-base p-4">
+                <View className="flex-row items-center gap-3 flex-1">
+                  <Feather name="mail" size={16} color="#60A5FA" />
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-text-primary" numberOfLines={1}>
+                      {acct.email_address}
+                    </Text>
+                    <Text className="text-xs text-text-muted mt-0.5">
+                      {acct.provider} · {acct.last_scanned_at
+                        ? `Scanned ${new Date(acct.last_scanned_at).toLocaleDateString()}`
+                        : "Not scanned yet"}
+                    </Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => handleUnlinkEmail(acct.id)}
+                  className="rounded-full border border-danger/30 px-3 py-1 ml-3"
+                >
+                  <Text className="text-xs text-danger">Unlink</Text>
+                </Pressable>
+              </View>
+            ))}
+            <Pressable
+              onPress={handleScanEmails}
+              disabled={scanning}
+              className="flex-row items-center gap-2 rounded-full border border-border px-4 py-2 self-start"
+              style={{ opacity: scanning ? 0.5 : 1 }}
+            >
+              {scanning ? (
+                <ActivityIndicator size={12} color="#71717A" />
+              ) : (
+                <Feather name="search" size={12} color="#71717A" />
+              )}
+              <Text className="text-xs font-medium text-text-secondary">
+                Scan for Receipts
               </Text>
-            </View>
-          ))}
-          <Pressable
-            onPress={handleRefresh}
-            disabled={refreshing}
-            className="flex-row items-center gap-2 rounded-full border border-border px-4 py-2 self-start"
-            style={{ opacity: refreshing ? 0.5 : 1 }}
-          >
-            {refreshing ? (
-              <ActivityIndicator size={12} color="#71717A" />
-            ) : (
-              <Feather name="refresh-cw" size={12} color="#71717A" />
-            )}
-            <Text className="text-xs font-medium text-text-secondary">
-              Refresh Accounts
+            </Pressable>
+          </>
+        ) : (
+          <View className="gap-2">
+            <Text className="text-sm text-text-muted leading-5">
+              Link your email to automatically detect subscriptions from billing receipts.
             </Text>
-          </Pressable>
-        </>
-      ) : (
-        <Text className="py-4 text-center text-sm text-text-muted">
-          No linked accounts. Go through onboarding to link a bank.
-        </Text>
-      )}
+            <Pressable
+              onPress={handleLinkEmail}
+              disabled={linkingEmail}
+              className="flex-row items-center gap-2 rounded-full bg-gold px-5 py-2 self-start"
+              style={{ opacity: linkingEmail ? 0.5 : 1 }}
+            >
+              {linkingEmail ? (
+                <ActivityIndicator size={14} color="#000" />
+              ) : (
+                <Feather name="mail" size={14} color="#000" />
+              )}
+              <Text className="text-xs font-medium text-black">
+                Link Gmail Account
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 function PreferencesTab() {
+  const [prefs, setPrefs] = useState({
+    briefing_frequency: "weekly",
+    communication_style: "brief",
+    agent_strictness: "balanced",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.settings
+      .get()
+      .then((data: any) => {
+        setPrefs({
+          briefing_frequency: data.briefing_frequency || "weekly",
+          communication_style: data.communication_style || "brief",
+          agent_strictness: data.agent_strictness || "balanced",
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const updatePref = (key: string, value: string) => {
+    const updated = { ...prefs, [key]: value };
+    setPrefs(updated);
+    setSaving(true);
+    api.settings.update(updated).catch(console.error).finally(() => setSaving(false));
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-row items-center justify-center gap-2 py-8">
+        <ActivityIndicator size="small" color="#71717A" />
+        <Text className="text-sm text-text-muted">Loading preferences...</Text>
+      </View>
+    );
+  }
+
   return (
     <View className="gap-5">
+      {saving && (
+        <Text className="text-[10px] text-gold">Saving...</Text>
+      )}
       <PreferenceRow
         label="Briefing Frequency"
-        options={["Daily", "Weekly"]}
-        defaultValue="Weekly"
+        options={["daily", "weekly"]}
+        value={prefs.briefing_frequency}
+        onChange={(v) => updatePref("briefing_frequency", v)}
       />
       <PreferenceRow
         label="Communication Style"
-        options={["Brief", "Detailed"]}
-        defaultValue="Brief"
+        options={["brief", "detailed"]}
+        value={prefs.communication_style}
+        onChange={(v) => updatePref("communication_style", v)}
       />
       <PreferenceRow
         label="Agent Strictness"
-        options={["Gentle", "Balanced", "Strict"]}
-        defaultValue="Balanced"
+        options={["gentle", "balanced", "strict"]}
+        value={prefs.agent_strictness}
+        onChange={(v) => updatePref("agent_strictness", v)}
       />
     </View>
   );
@@ -262,38 +419,95 @@ function SandboxTab() {
 }
 
 function PrivacyTab() {
-  const MEMORIES = [
-    "You get paid biweekly on the 15th and 30th",
-    "Rent is $1,200, due on the 1st",
-    "You kept gym membership in February",
-    "You tend to overspend on dining early in the month",
-  ];
+  const { clearSession } = useAuth0();
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const data = await api.settings.export();
+      const json = JSON.stringify(data, null, 2);
+      if (typeof window !== "undefined") {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "ledger-export.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("[SETTINGS] Export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.settings.deleteAccount();
+      clearToken();
+      await clearSession();
+    } catch (err) {
+      console.error("[SETTINGS] Delete failed:", err);
+      setDeleting(false);
+    }
+  };
 
   return (
     <View className="gap-4">
-      <Text className="text-sm font-semibold text-text-primary">
-        What Ledger Remembers
+      <Text className="text-sm font-semibold text-text-primary">Your Data</Text>
+      <Text className="text-xs text-text-muted leading-5">
+        Ledger stores your transaction data, goals, and preferences. You can export or permanently delete all of it below.
       </Text>
-      {MEMORIES.map((memory, i) => (
-        <View
-          key={i}
-          className="flex-row items-center justify-between rounded-xl border border-border bg-base p-3"
+      <View className="flex-row gap-3 pt-1 flex-wrap">
+        <Pressable
+          onPress={handleExport}
+          disabled={exporting}
+          className="flex-row items-center gap-2 rounded-full border border-border px-4 py-2"
+          style={{ opacity: exporting ? 0.5 : 1 }}
         >
-          <Text className="text-sm text-text-secondary flex-1 mr-3">
-            {memory}
-          </Text>
-          <Pressable className="rounded-full border border-danger/30 px-3 py-1 shrink-0">
-            <Text className="text-xs text-danger">Forget</Text>
-          </Pressable>
-        </View>
-      ))}
-      <View className="flex-row gap-3 pt-2 flex-wrap">
-        <Pressable className="rounded-full border border-border px-4 py-2">
+          {exporting ? (
+            <ActivityIndicator size={12} color="#71717A" />
+          ) : (
+            <Feather name="download" size={12} color="#71717A" />
+          )}
           <Text className="text-xs text-text-secondary">Export My Data</Text>
         </Pressable>
-        <Pressable className="rounded-full border border-danger/30 px-4 py-2">
-          <Text className="text-xs text-danger">Delete My Account</Text>
-        </Pressable>
+        {!confirmDelete ? (
+          <Pressable
+            onPress={() => setConfirmDelete(true)}
+            className="flex-row items-center gap-2 rounded-full border border-danger/30 px-4 py-2"
+          >
+            <Feather name="trash-2" size={12} color="#EF4444" />
+            <Text className="text-xs text-danger">Delete My Account</Text>
+          </Pressable>
+        ) : (
+          <View className="gap-2">
+            <Text className="text-xs text-danger">Are you sure? This cannot be undone.</Text>
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={handleDelete}
+                disabled={deleting}
+                className="rounded-full bg-danger px-4 py-2"
+                style={{ opacity: deleting ? 0.5 : 1 }}
+              >
+                <Text className="text-xs font-medium text-white">
+                  {deleting ? "Deleting..." : "Yes, Delete Everything"}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setConfirmDelete(false)}
+                className="rounded-full border border-border px-3 py-2"
+              >
+                <Text className="text-xs text-text-muted">Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -351,14 +565,14 @@ function AboutTab({
 function PreferenceRow({
   label,
   options,
-  defaultValue,
+  value,
+  onChange,
 }: {
   label: string;
   options: string[];
-  defaultValue: string;
+  value: string;
+  onChange: (v: string) => void;
 }) {
-  const [selected, setSelected] = useState(defaultValue);
-
   return (
     <View className="flex-row items-center justify-between">
       <Text className="text-sm text-text-secondary">{label}</Text>
@@ -366,15 +580,15 @@ function PreferenceRow({
         {options.map((opt) => (
           <Pressable
             key={opt}
-            onPress={() => setSelected(opt)}
+            onPress={() => onChange(opt)}
             className="rounded-full px-3 py-1"
             style={{
-              backgroundColor: selected === opt ? "#D4A853" : "transparent",
+              backgroundColor: value === opt ? "#D4A853" : "transparent",
             }}
           >
             <Text
-              className="text-xs font-medium"
-              style={{ color: selected === opt ? "#000" : "#71717A" }}
+              className="text-xs font-medium capitalize"
+              style={{ color: value === opt ? "#000" : "#71717A" }}
             >
               {opt}
             </Text>
