@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth0 } from "react-native-auth0";
+import { useAuth0 } from "../lib/use-auth";
 import { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 

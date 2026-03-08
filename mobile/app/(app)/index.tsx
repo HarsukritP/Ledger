@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth0 } from "react-native-auth0";
+import { useAuth0 } from "../../lib/use-auth";
 import { MoneyText } from "../../components/finance/MoneyText";
 import { AgentBadge } from "../../components/finance/AgentBadge";
 import { ActionCard } from "../../components/finance/ActionCard";

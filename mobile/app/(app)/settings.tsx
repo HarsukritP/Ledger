@@ -8,7 +8,7 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth0 } from "react-native-auth0";
+import { useAuth0 } from "../../lib/use-auth";
 import { Feather } from "@expo/vector-icons";
 import { clearToken } from "../../hooks/useAuthToken";
 import { api } from "../../lib/api";

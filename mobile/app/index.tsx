@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
-import { useAuth0 } from "react-native-auth0";
+import { useAuth0 } from "../lib/use-auth";
 import { View, ActivityIndicator } from "react-native";
 import { api } from "../lib/api";
 

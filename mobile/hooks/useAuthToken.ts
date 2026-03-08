@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useAuth0 } from "react-native-auth0";
+import { useAuth0 } from "../lib/use-auth";
 
 let cachedToken: string | null = null;
 let tokenError: string | null = null;

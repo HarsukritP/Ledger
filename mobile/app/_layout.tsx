@@ -1,6 +1,6 @@
 import "../global.css";
 import { Stack } from "expo-router";
-import { Auth0Provider } from "react-native-auth0";
+import { Auth0Provider } from "../lib/auth-provider";
 import { StatusBar } from "expo-status-bar";
 import { useAuthToken } from "../hooks/useAuthToken";
 

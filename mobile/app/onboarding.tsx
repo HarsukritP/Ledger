@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth0 } from "react-native-auth0";
+import { useAuth0 } from "../lib/use-auth";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { api } from "../lib/api";
