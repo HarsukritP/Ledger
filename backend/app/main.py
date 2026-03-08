@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers import (
     auth, plaid, dashboard, forecast, subscriptions,
-    goals, chat, briefing, settings as settings_router,
+    goals, chat, briefing, settings as settings_router, push,
 )
 
 # --- Structured logging: everything goes to stdout for Railway ---
@@ -38,6 +38,7 @@ app.include_router(goals.router)
 app.include_router(chat.router)
 app.include_router(briefing.router)
 app.include_router(settings_router.router)
+app.include_router(push.router)
 
 
 @app.on_event("startup")

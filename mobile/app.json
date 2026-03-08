@@ -24,18 +24,11 @@
       "bundler": "metro",
       "output": "single",
       "backgroundColor": "#09090B",
-      "themeColor": "#09090B",
-      "favicon": "./assets/favicon.png"
+      "themeColor": "#09090B"
     },
     "plugins": [
       "expo-router",
-      "expo-font",
-      [
-        "react-native-auth0",
-        {
-          "domain": "dev-rlqpb3p7hzb1ldkr.us.auth0.com"
-        }
-      ]
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

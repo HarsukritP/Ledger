@@ -25,5 +25,9 @@ class Settings:
 
     elevenlabs_api_key: str = os.getenv("ELEVENLABS_API_KEY", "")
 
+    vapid_public_key: str = os.getenv("VAPID_PUBLIC_KEY", "")
+    vapid_private_key: str = os.getenv("VAPID_PRIVATE_KEY", "")
+    vapid_email: str = os.getenv("VAPID_EMAIL", "mailto:admin@ledger.app")
+
 
 settings = Settings()

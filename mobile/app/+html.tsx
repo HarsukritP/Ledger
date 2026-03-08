@@ -32,6 +32,16 @@ export default function Root({ children }: PropsWithChildren) {
 
         <ScrollViewStyleReset />
 
+        {/* Register service worker for push notifications */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .catch(function(e) { console.warn('[SW] registration failed:', e); });
+            });
+          }
+        `}} />
+
         <style dangerouslySetInnerHTML={{ __html: `
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
           html {

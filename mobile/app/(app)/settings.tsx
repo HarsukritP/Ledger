@@ -13,6 +13,7 @@ import { useAuth0 } from "../../lib/use-auth";
 import { Feather } from "@expo/vector-icons";
 import { clearToken } from "../../hooks/useAuthToken";
 import { api } from "../../lib/api";
+import { usePushNotifications } from "../../hooks/usePushNotifications";
 
 const TABS = [
   { id: "accounts", label: "Accounts", icon: "link" as const },
@@ -681,10 +682,82 @@ function PrivacyTab() {
   );
 }
 
+/* ─── Notifications section (used inside AboutTab) ───────────────── */
+function NotificationsSection() {
+  const { state, subscribing, enable, disable, sendTest } = usePushNotifications();
+  const [testSent, setTestSent] = useState(false);
+
+  if (state === "unsupported") return null;
+
+  const handleTest = async () => {
+    await sendTest();
+    setTestSent(true);
+    setTimeout(() => setTestSent(false), 3000);
+  };
+
+  return (
+    <View style={{ gap: 12 }}>
+      <SectionHeader icon="bell" label="Notifications" />
+      <Card>
+        <View style={{ padding: 14, gap: 12 }}>
+          <Text style={{ fontSize: 13, color: "#71717A", lineHeight: 18 }}>
+            Get alerted when your balance runs low or your weekly briefing is ready.
+          </Text>
+
+          {state === "denied" ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#EF444410", borderRadius: 10, padding: 10 }}>
+              <Feather name="alert-circle" size={13} color="#EF4444" />
+              <Text style={{ fontSize: 12, color: "#EF4444", flex: 1, lineHeight: 17 }}>
+                Notifications are blocked. Enable them in your browser / device settings.
+              </Text>
+            </View>
+          ) : state === "granted" ? (
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "#34D39910", borderRadius: 10, padding: 10 }}>
+                <Feather name="check-circle" size={13} color="#34D399" />
+                <Text style={{ fontSize: 12, color: "#34D399", fontWeight: "500" }}>Notifications enabled</Text>
+              </View>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  onPress={handleTest}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, borderWidth: 1, borderColor: "#27272A", paddingHorizontal: 14, paddingVertical: 7 }}
+                >
+                  <Feather name="send" size={12} color="#71717A" />
+                  <Text style={{ fontSize: 12, color: "#A1A1AA", fontWeight: "500" }}>
+                    {testSent ? "Sent!" : "Send Test"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={disable}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, borderWidth: 1, borderColor: "#EF444430", paddingHorizontal: 14, paddingVertical: 7 }}
+                >
+                  <Feather name="bell-off" size={12} color="#EF4444" />
+                  <Text style={{ fontSize: 12, color: "#EF4444", fontWeight: "500" }}>Disable</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={enable}
+              disabled={subscribing}
+              style={{ flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start", backgroundColor: "#D4A853", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9, opacity: subscribing ? 0.6 : 1 }}
+            >
+              {subscribing ? <ActivityIndicator size={13} color="#000" /> : <Feather name="bell" size={13} color="#000" />}
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#000" }}>Enable Notifications</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Card>
+    </View>
+  );
+}
+
 /* ─── About tab ───────────────────────────────────────────────────── */
 function AboutTab({ user, onSignOut }: { user: any; onSignOut: () => void }) {
   return (
     <View style={{ gap: 16 }}>
+      <NotificationsSection />
+
       {user && (
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 12 }}>

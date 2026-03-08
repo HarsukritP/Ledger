@@ -126,6 +126,15 @@ export const api = {
       }),
   },
 
+  push: {
+    vapidKey: () => request<{ publicKey: string }>("/push/vapid-public-key"),
+    subscribe: (sub: { endpoint: string; p256dh: string; auth: string }) =>
+      request("/push/subscribe", { method: "POST", body: JSON.stringify(sub) }),
+    unsubscribe: (sub: { endpoint: string; p256dh: string; auth: string }) =>
+      request("/push/subscribe", { method: "DELETE", body: JSON.stringify(sub) }),
+    test: () => request("/push/test", { method: "POST" }),
+  },
+
   email: {
     accounts: () => request<any>("/email/accounts"),
     authUrl: () => request<any>("/email/auth-url"),

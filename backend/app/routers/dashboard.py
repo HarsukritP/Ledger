@@ -66,7 +66,25 @@ async def get_health(user=Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="User not found in database")
 
     try:
-        return await data_service.get_health_metrics(user_db_id)
+        metrics = await data_service.get_health_metrics(user_db_id)
+
+        # Send a low-balance push when checking balance is critically low.
+        # Only fires when balance is positive but below $200 to avoid spam.
+        try:
+            balance = float(metrics.get("balance", 0))
+            danger = float(metrics.get("danger_threshold", 500))
+            if 0 < balance < danger:
+                from app.services.push_service import send_to_user
+                send_to_user(
+                    user_db_id,
+                    title="⚠️ Low balance alert",
+                    body=f"Your checking balance is ${balance:,.2f} — below the ${danger:,.0f} threshold.",
+                    data={"type": "low_balance", "balance": balance},
+                )
+        except Exception:
+            pass
+
+        return metrics
     except Exception as e:
         logger.error(f"[DASHBOARD] health failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

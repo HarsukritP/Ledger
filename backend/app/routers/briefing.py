@@ -35,6 +35,18 @@ async def generate_briefing(user=Depends(get_current_user)):
             detail=f"Briefing generation failed: {str(e)}",
         )
 
+    # Fire-and-forget push notification — don't let push failure break the response.
+    try:
+        from app.services.push_service import send_to_user
+        send_to_user(
+            user_sub,
+            title="Your Ledger briefing is ready",
+            body=content[:80] + ("…" if len(content) > 80 else ""),
+            data={"type": "briefing"},
+        )
+    except Exception:
+        pass
+
     return BriefingOut(
         id="briefing_latest",
         content=content,

@@ -1,1 +1,6 @@
-export { useAuth0 } from "react-native-auth0";
+import { useContext } from "react";
+import { AuthContext } from "./auth-provider";
+
+export function useAuth0() {
+  return useContext(AuthContext);
+}
