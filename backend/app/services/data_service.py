@@ -295,18 +295,21 @@ class DataService:
                     })
 
         goals = self.get_goals(user_db_id)
+        logger.info(f"[DATA] Found {len(goals)} goals for forecast")
         for g in goals:
             target = float(g.get("target_amount", 0))
             current = float(g.get("current_amount", 0))
             remaining = target - current
             if remaining <= 0:
+                logger.info(f"[DATA] Skipping goal '{g.get('name')}' — already reached")
                 continue
 
-            target_date_str = g.get("target_date")
-            if target_date_str:
+            raw_date = g.get("target_date")
+            if raw_date:
                 try:
-                    target_date = date.fromisoformat(target_date_str[:10])
-                except ValueError:
+                    target_date = date.fromisoformat(str(raw_date)[:10])
+                except (ValueError, TypeError):
+                    logger.warning(f"[DATA] Could not parse target_date '{raw_date}' for goal '{g.get('name')}'")
                     target_date = today + timedelta(days=180)
             else:
                 target_date = today + timedelta(days=180)
@@ -324,6 +327,7 @@ class DataService:
                 next_contrib = next_contrib.replace(year=today.year + 1, month=1)
 
             if next_contrib <= today + timedelta(days=30):
+                logger.info(f"[DATA] Goal '{g.get('name')}' → ${monthly_contribution}/mo on {next_contrib}")
                 events.append({
                     "id": f"goal_{g.get('id', '')}",
                     "date": next_contrib.isoformat(),
@@ -332,6 +336,8 @@ class DataService:
                     "type": "savings",
                     "category": "Goal",
                 })
+            else:
+                logger.info(f"[DATA] Goal '{g.get('name')}' next_contrib={next_contrib} outside 30-day window")
 
         events.sort(key=lambda e: e["date"])
         return events
