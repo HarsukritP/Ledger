@@ -21,11 +21,18 @@ export default function WelcomeScreen() {
     setLoading(true);
     setError(null);
     try {
+      // loginWithPopup: auth happens in a popup, this page never navigates away
+      // so Safari's browser chrome never reappears after sign-in.
       await authorize();
+      // After the popup closes the auth state is updated; route to app entry.
       router.replace("/");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+    } catch (err: any) {
+      // Ignore "popup closed by user" — not an error worth showing
+      if (err?.error === "cancelled" || err?.message?.includes("popup")) {
+        setLoading(false);
+        return;
+      }
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
