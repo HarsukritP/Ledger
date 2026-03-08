@@ -41,15 +41,6 @@ async def generate_briefing(user=Depends(get_current_user)):
         )
 
     audio_url = None
-    if elevenlabs_service.is_configured and content:
-        try:
-            audio_bytes = await elevenlabs_service.generate_briefing_audio(content)
-            if audio_bytes:
-                _audio_cache[user_db_id] = audio_bytes
-                audio_url = "/briefing/audio"
-                logger.info(f"[BRIEFING] Audio generated: {len(audio_bytes)} bytes")
-        except Exception as e:
-            logger.warning(f"[BRIEFING] Audio generation failed (non-fatal): {e}")
 
     sb = get_supabase()
     if sb and user_db_id:

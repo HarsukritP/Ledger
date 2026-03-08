@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { MoneyText } from "../components/finance/MoneyText";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { ActionCard } from "../components/finance/ActionCard";
-import { BriefingPlayer } from "../components/finance/BriefingPlayer";
 import { getGreeting } from "../lib/utils";
 import { api } from "../lib/api";
 import type { ActionItem, HealthMetrics, ForecastEvent } from "../types";
@@ -20,6 +19,8 @@ export function HomePage() {
   const [categories, setCategories] = useState<{ category: string; amount: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [briefingText, setBriefingText] = useState<string | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
 
   useEffect(() => {
     api.dashboard.categories(30).then((data: any[]) => setCategories(data || [])).catch(() => {});
@@ -233,23 +234,43 @@ export function HomePage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
+        className="rounded-2xl border border-border bg-surface p-5"
       >
-        <BriefingPlayer
-          previewText={
-            weekAhead.length > 0
-              ? `This week: ${weekAhead.filter((e) => e.type !== "income").length} bills, ${weekAhead.filter((e) => e.type === "income").length} income.${predictedLow < 500 ? ` Watch your balance — it may dip to $${Math.round(predictedLow)}.` : ""}`
-              : "Link your bank account and sync transactions to get your weekly briefing."
-          }
-          onGenerate={async () => {
-            try {
-              const result = await api.briefing.generate();
-              return result;
-            } catch (err) {
-              console.error("[BRIEFING] Generate failed:", err);
-              return null;
-            }
-          }}
-        />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-gold" />
+            <span className="text-sm font-medium text-text-primary">Weekly Briefing</span>
+            <AgentBadge agent="pulse" />
+          </div>
+          {!briefingText && (
+            <button
+              onClick={async () => {
+                setBriefingLoading(true);
+                try {
+                  const result = await api.briefing.generate();
+                  if (result?.content) setBriefingText(result.content);
+                } catch (err) {
+                  console.error("[BRIEFING] Failed:", err);
+                } finally {
+                  setBriefingLoading(false);
+                }
+              }}
+              disabled={briefingLoading}
+              className="flex items-center gap-1.5 rounded-full bg-gold px-3 py-1 text-xs font-medium text-black transition-colors hover:bg-gold/90 disabled:opacity-50"
+            >
+              {briefingLoading ? <><Loader2 size={12} className="animate-spin" /> Generating...</> : "Generate"}
+            </button>
+          )}
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+          {briefingText
+            ? briefingText
+            : briefingLoading
+              ? "Your AI team is analyzing your finances..."
+              : weekAhead.length > 0
+                ? `This week: ${weekAhead.filter((e) => e.type !== "income").length} bills, ${weekAhead.filter((e) => e.type === "income").length} income deposits.${predictedLow < 500 ? ` Watch your balance — it may dip to $${Math.round(predictedLow)}.` : ""} Tap Generate for a full AI briefing.`
+                : "Link your bank account and sync transactions to get your weekly briefing."}
+        </p>
       </motion.div>
     </div>
   );
