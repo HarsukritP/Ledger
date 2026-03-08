@@ -23,6 +23,7 @@ from app.agents.prompts import (
     AUDIT_SYSTEM_PROMPT,
     NORTH_STAR_SYSTEM_PROMPT,
     SENTINEL_SYSTEM_PROMPT,
+    RECEIPT_SCANNER_SYSTEM_PROMPT,
     COUNCIL_SYSTEM_PROMPT,
     COUNCIL_TOOLS,
 )
@@ -34,6 +35,7 @@ SPECIALIST_DEFS = {
     "audit": ("Ledger Audit", AUDIT_SYSTEM_PROMPT),
     "north_star": ("Ledger North Star", NORTH_STAR_SYSTEM_PROMPT),
     "sentinel": ("Ledger Sentinel", SENTINEL_SYSTEM_PROMPT),
+    "receipt_scanner": ("Ledger Receipt Scanner", RECEIPT_SCANNER_SYSTEM_PROMPT),
 }
 
 BASE_URL = "https://app.backboard.io/api"
@@ -88,7 +90,7 @@ class BackboardService:
     async def _rest_get(self, path: str) -> dict | list:
         full_url = f"{BASE_URL}{path}"
         try:
-            async with httpx.AsyncClient(timeout=15) as http:
+            async with httpx.AsyncClient(timeout=30) as http:
                 resp = await http.get(full_url, headers={"X-API-Key": self.api_key})
                 if resp.status_code != 200:
                     logger.error(
@@ -107,11 +109,11 @@ class BackboardService:
     async def _rest_post(self, path: str, body: dict) -> dict:
         full_url = f"{BASE_URL}{path}"
         try:
-            async with httpx.AsyncClient(timeout=15) as http:
+            async with httpx.AsyncClient(timeout=30) as http:
                 resp = await http.post(
                     full_url, headers={"X-API-Key": self.api_key}, json=body
                 )
-                if resp.status_code != 200:
+                if resp.status_code not in (200, 201):
                     logger.error(
                         f"REST POST {path} → {resp.status_code}: {resp.text[:500]}"
                     )
@@ -124,6 +126,25 @@ class BackboardService:
         except Exception as e:
             logger.error(f"REST POST {path} failed: {e}\n{traceback.format_exc()}")
             raise BackboardError(f"Backboard POST {path} failed: {e}") from e
+
+    async def _rest_delete(self, path: str) -> dict:
+        full_url = f"{BASE_URL}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=30) as http:
+                resp = await http.delete(full_url, headers={"X-API-Key": self.api_key})
+                if resp.status_code not in (200, 204):
+                    logger.error(
+                        f"REST DELETE {path} → {resp.status_code}: {resp.text[:500]}"
+                    )
+                    raise BackboardError(
+                        f"Backboard DELETE {path} returned {resp.status_code}: {resp.text[:200]}"
+                    )
+                return resp.json() if resp.text else {}
+        except BackboardError:
+            raise
+        except Exception as e:
+            logger.error(f"REST DELETE {path} failed: {e}\n{traceback.format_exc()}")
+            raise BackboardError(f"Backboard DELETE {path} failed: {e}") from e
 
     # ------------------------------------------------------------------
     # Initialization
@@ -141,8 +162,28 @@ class BackboardService:
         logger.info(f"Found {len(result)} existing assistants on Backboard")
         return result
 
+    async def ensure_specialist(self, key: str):
+        """Ensure a specific specialist exists, creating it if needed."""
+        if key in self._specialist_ids:
+            return
+        if key not in SPECIALIST_DEFS:
+            raise BackboardError(f"Unknown specialist: {key}")
+
+        self._require_configured()
+        client = self._get_client()
+        name, prompt = SPECIALIST_DEFS[key]
+        existing = await self._list_existing_assistants()
+
+        if name in existing:
+            self._specialist_ids[key] = existing[name]
+            logger.info(f"Found specialist {name} → {existing[name]}")
+        else:
+            asst = await client.create_assistant(name=name, system_prompt=prompt)
+            self._specialist_ids[key] = asst.assistant_id
+            logger.info(f"Created specialist {name} → {asst.assistant_id}")
+
     async def initialize(self):
-        """Create / find the 4 specialist assistants. Called lazily on first use."""
+        """Create / find the specialist assistants. Called lazily on first use."""
         if self._initialized:
             return
 
@@ -289,6 +330,32 @@ class BackboardService:
             f"Memory seeding for {user_sub}: {success} ok, {failed} failed "
             f"out of {len(memories)}"
         )
+
+    async def list_memories(self, user_sub: str) -> list[dict]:
+        """List all memories for a user's Council assistant."""
+        council_id = self._council_ids.get(user_sub)
+        if not council_id:
+            return []
+        try:
+            data = await self._rest_get(f"/assistants/{council_id}/memories")
+            if isinstance(data, list):
+                return data
+            return data.get("memories", data.get("data", []))
+        except BackboardError as e:
+            logger.warning(f"Could not list memories for {user_sub}: {e}")
+            return []
+
+    async def delete_memory(self, user_sub: str, memory_id: str) -> bool:
+        """Delete a specific memory from a user's Council assistant."""
+        council_id = self._council_ids.get(user_sub)
+        if not council_id:
+            return False
+        try:
+            await self._rest_delete(f"/assistants/{council_id}/memories/{memory_id}")
+            return True
+        except BackboardError as e:
+            logger.warning(f"Could not delete memory {memory_id}: {e}")
+            return False
 
     async def _build_user_memories(self, user_sub: str) -> list[str]:
         """Generate memory entries from the user's real transaction data."""
@@ -760,11 +827,11 @@ class BackboardService:
         result = await self.send_message(
             user_sub=user_sub,
             message=(
-                "Generate my weekly financial briefing. Check my account summary, "
-                "review upcoming cashflow via Pulse, audit my subscriptions, check "
-                "goal progress, and flag any anomalies from Sentinel. Synthesize "
-                "everything into a warm but direct 45-second summary. Start with "
-                "the single most important thing I need to know this week."
+                "Generate a brief weekly financial summary. "
+                "First call get_account_summary and get_recurring_charges to get the data. "
+                "Then write a warm, conversational 3-4 sentence briefing covering: "
+                "current balance, any upcoming bills this week, and one actionable tip. "
+                "Keep it under 100 words. Do NOT call analyze_with_specialist — just use the raw data."
             ),
             user_name=user_name,
         )

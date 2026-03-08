@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Loader2, Mail, Search } from "lucide-react";
+import { ChevronDown, Loader2, Mail, Search, Plus, X } from "lucide-react";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { MoneyText } from "../components/finance/MoneyText";
 import { cn } from "../lib/utils";
 import { api } from "../lib/api";
-import type { Subscription } from "../types";
+import type { Expense } from "../types";
 
 const FILTERS = ["All", "Needs Review", "Keep", "Flagged"] as const;
 
@@ -24,7 +24,7 @@ function getCategoryLabel(cat: string): string {
 }
 
 export function ExpensesPage() {
-  const [subs, setSubs] = useState<(Subscription & { category?: string })[]>([]);
+  const [subs, setSubs] = useState<(Expense & { category?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("All");
@@ -32,6 +32,12 @@ export function ExpensesPage() {
   const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
   const [linkingEmail, setLinkingEmail] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+  const [newCategory, setNewCategory] = useState("GENERAL_SERVICES");
+  const [newFreq, setNewFreq] = useState("monthly");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     api.expenses
@@ -89,6 +95,38 @@ export function ExpensesPage() {
       console.error("[EMAIL] Scan failed:", err);
     } finally {
       setScanning(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!newName || !newAmount) return;
+    setCreating(true);
+    try {
+      const result = await api.expenses.create({
+        name: newName,
+        amount: parseFloat(newAmount),
+        frequency: newFreq,
+        category: newCategory,
+      });
+      setSubs((prev) => [...prev, {
+        id: result.id,
+        name: result.name,
+        amount: result.amount,
+        frequency: result.frequency || "monthly",
+        valueScore: 3,
+        status: "active",
+        lastChargeDate: "",
+        category: result.category,
+      }]);
+      setShowAdd(false);
+      setNewName("");
+      setNewAmount("");
+      setNewCategory("GENERAL_SERVICES");
+      setNewFreq("monthly");
+    } catch (err) {
+      console.error("[EXPENSES] Create failed:", err);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -160,6 +198,13 @@ export function ExpensesPage() {
             <AgentBadge agent="audit" />
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex items-center gap-1.5 rounded-full bg-gold px-4 py-1.5 text-xs font-medium text-black transition-colors hover:bg-gold/90"
+            >
+              <Plus size={12} />
+              Add
+            </button>
             {emailAccounts.length > 0 ? (
               <button
                 onClick={handleScanEmails}
@@ -173,7 +218,7 @@ export function ExpensesPage() {
               <button
                 onClick={handleLinkEmail}
                 disabled={linkingEmail}
-                className="flex items-center gap-1.5 rounded-full bg-gold px-4 py-1.5 text-xs font-medium text-black transition-colors hover:bg-gold/90 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-raised disabled:opacity-50"
               >
                 {linkingEmail ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
                 Link Email
@@ -335,6 +380,78 @@ export function ExpensesPage() {
           ))}
         </div>
       )}
+
+      {/* Add Expense Modal */}
+      <AnimatePresence>
+        {showAdd && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setShowAdd(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border border-border bg-surface p-6"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-text-primary">Add Expense</h2>
+                <button onClick={() => setShowAdd(false)}>
+                  <X size={20} className="text-text-muted" />
+                </button>
+              </div>
+              <div className="mt-4 space-y-3">
+                <input
+                  type="text"
+                  placeholder="Name (e.g. Netflix, Gym, Phone Bill)"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-gold/50 focus:outline-none"
+                />
+                <input
+                  type="number"
+                  placeholder="Amount per month ($)"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-gold/50 focus:outline-none"
+                />
+                <select
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary focus:border-gold/50 focus:outline-none"
+                >
+                  <option value="ENTERTAINMENT">Entertainment</option>
+                  <option value="GENERAL_SERVICES">Services</option>
+                  <option value="RENT_AND_UTILITIES">Rent & Utilities</option>
+                  <option value="PERSONAL_CARE">Personal Care</option>
+                  <option value="FOOD_AND_DRINK">Food & Drink</option>
+                  <option value="TRANSPORTATION">Transportation</option>
+                </select>
+                <select
+                  value={newFreq}
+                  onChange={(e) => setNewFreq(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary focus:border-gold/50 focus:outline-none"
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="annual">Annual</option>
+                </select>
+                <button
+                  onClick={handleCreate}
+                  disabled={creating || !newName || !newAmount}
+                  className="w-full rounded-full bg-gold py-2.5 text-sm font-medium text-black disabled:opacity-50"
+                >
+                  {creating ? "Adding..." : "Add Expense"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

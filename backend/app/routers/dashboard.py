@@ -97,9 +97,10 @@ async def respond_to_action(action_id: str, body: ActionResponse, user=Depends(g
     sb = get_supabase()
     if sb and user_db_id:
         try:
+            from datetime import datetime
             sb.table("action_queue").update({
                 "status": body.response,
-                "resolved_at": "now()",
+                "resolved_at": datetime.utcnow().isoformat(),
             }).eq("id", action_id).eq("user_id", user_db_id).execute()
         except Exception as e:
             logger.warning(f"[DASHBOARD] Could not update action {action_id}: {e}")

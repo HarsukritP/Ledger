@@ -21,6 +21,19 @@ async def _get_jwks() -> dict:
         return _jwks_cache
 
 
+async def _fetch_userinfo(token: str) -> dict:
+    """Fetch full user profile from Auth0 /userinfo (has email, name, picture)."""
+    url = f"https://{settings.auth0_domain}/userinfo"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+            resp.raise_for_status()
+            return resp.json()
+    except Exception as e:
+        logger.warning(f"[AUTH] Could not fetch userinfo: {e}")
+        return {}
+
+
 async def get_current_user(authorization: str = Header(default="")):
     """Validate Auth0 JWT and return user claims."""
     if not settings.auth0_domain or not settings.auth0_client_id:
@@ -67,10 +80,18 @@ async def get_current_user(authorization: str = Header(default="")):
         )
         logger.info(f"[AUTH] JWT valid — sub={payload.get('sub', '?')}")
 
+        email = payload.get("email", "")
+        name = payload.get("name", payload.get("nickname", ""))
+
+        if not email or email == payload.get("sub", ""):
+            userinfo = await _fetch_userinfo(token)
+            email = userinfo.get("email", email) or email
+            name = name or userinfo.get("name", "") or ""
+
         user_info = {
             "sub": payload.get("sub", ""),
-            "email": payload.get("email", payload.get("sub", "")),
-            "name": payload.get("name", payload.get("nickname", "")),
+            "email": email,
+            "name": name,
         }
 
         from app.services.supabase_client import get_or_create_user

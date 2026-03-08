@@ -23,7 +23,8 @@ class Settings:
     llm_provider: str = os.getenv("LLM_PROVIDER", "openai")
     llm_model: str = os.getenv("LLM_MODEL", "gpt-4.1-mini")
 
-    elevenlabs_api_key: str = os.getenv("ELEVENLABS_API_KEY", "")
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
     vapid_public_key: str = os.getenv("VAPID_PUBLIC_KEY", "")
     vapid_private_key: str = os.getenv("VAPID_PRIVATE_KEY", "")

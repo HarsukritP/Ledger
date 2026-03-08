@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Send, Mic, Loader2, AlertTriangle, Trash2 } from "lucide-react";
+import { Send, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { api } from "../lib/api";
 import type { AgentName } from "../types";
@@ -212,9 +212,6 @@ export function ChatPage() {
       </div>
 
       <div className="mt-3 flex items-center gap-2">
-        <button className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-text-muted hover:bg-surface-raised">
-          <Mic size={18} />
-        </button>
         <div className="relative flex-1">
           <input
             value={input}

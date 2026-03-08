@@ -1,17 +1,60 @@
-"""Subscriptions endpoints — recurring charges detected from real Plaid transaction data."""
+"""Expenses endpoints — recurring charges (bills, subscriptions, rent) from Plaid, email, or manual entry."""
 import logging
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.services.data_service import data_service
 from app.services.supabase_client import get_supabase
 
-logger = logging.getLogger("ledger.subs")
+logger = logging.getLogger("ledger.expenses")
 
-router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
+router = APIRouter(prefix="/expenses", tags=["expenses"])
+
+
+class ExpenseCreate(BaseModel):
+    name: str
+    amount: float
+    frequency: str = "monthly"
+    category: str = "GENERAL_SERVICES"
+
+
+@router.post("")
+async def create_expense(body: ExpenseCreate, user=Depends(get_current_user)):
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    try:
+        result = sb.table("recurring_charges").insert({
+            "user_id": user_db_id,
+            "merchant_name": body.name,
+            "average_amount": body.amount,
+            "frequency": body.frequency,
+            "category": body.category,
+            "value_score": 3,
+            "status": "active",
+            "source": "manual",
+        }).execute()
+        row = result.data[0] if result.data else {}
+        return {
+            "id": str(row.get("id", "")),
+            "name": body.name,
+            "amount": body.amount,
+            "frequency": body.frequency,
+            "category": body.category,
+            "status": "active",
+        }
+    except Exception as e:
+        logger.error(f"[EXPENSES] create failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("")
-async def list_subscriptions(user=Depends(get_current_user)):
+async def list_expenses(user=Depends(get_current_user)):
     user_db_id = user.get("db_id")
     if not user_db_id:
         raise HTTPException(status_code=400, detail="User not found in database")
@@ -29,16 +72,17 @@ async def list_subscriptions(user=Depends(get_current_user)):
                 "last_charge_date": r.get("last_charge_date", ""),
                 "usage_estimate": r.get("usage_estimate"),
                 "category": r.get("category", ""),
+                "source": r.get("source", "bank"),
             }
             for i, r in enumerate(recurring)
         ]
     except Exception as e:
-        logger.error(f"[SUBS] list failed: {e}")
+        logger.error(f"[EXPENSES] list failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{sub_id}")
-async def get_subscription(sub_id: str, user=Depends(get_current_user)):
+@router.get("/{expense_id}")
+async def get_expense(expense_id: str, user=Depends(get_current_user)):
     user_db_id = user.get("db_id")
     if not user_db_id:
         raise HTTPException(status_code=400, detail="User not found in database")
@@ -50,12 +94,12 @@ async def get_subscription(sub_id: str, user=Depends(get_current_user)):
     result = (
         sb.table("recurring_charges")
         .select("*")
-        .eq("id", sub_id)
+        .eq("id", expense_id)
         .eq("user_id", user_db_id)
         .execute()
     )
     if not result.data:
-        raise HTTPException(status_code=404, detail="Subscription not found")
+        raise HTTPException(status_code=404, detail="Expense not found")
 
     r = result.data[0]
     return {
@@ -69,11 +113,12 @@ async def get_subscription(sub_id: str, user=Depends(get_current_user)):
         "usage_estimate": r.get("usage_estimate"),
         "category": r.get("category", ""),
         "price_history": r.get("price_history", []),
+        "source": r.get("source", "bank"),
     }
 
 
-@router.post("/{sub_id}/decision")
-async def decide_subscription(sub_id: str, decision: str, reason: str = "", user=Depends(get_current_user)):
+@router.post("/{expense_id}/decision")
+async def decide_expense(expense_id: str, decision: str, reason: str = "", user=Depends(get_current_user)):
     user_db_id = user.get("db_id")
     sb = get_supabase()
     if sb and user_db_id:
@@ -82,8 +127,8 @@ async def decide_subscription(sub_id: str, decision: str, reason: str = "", user
             sb.table("recurring_charges").update({
                 "status": new_status,
                 "decision_reason": reason or decision,
-            }).eq("id", sub_id).eq("user_id", user_db_id).execute()
+            }).eq("id", expense_id).eq("user_id", user_db_id).execute()
         except Exception as e:
-            logger.warning(f"[SUBS] Could not update decision for {sub_id}: {e}")
+            logger.warning(f"[EXPENSES] Could not update decision for {expense_id}: {e}")
 
-    return {"status": "ok", "sub_id": sub_id, "decision": decision, "reason": reason}
+    return {"status": "ok", "expense_id": expense_id, "decision": decision, "reason": reason}

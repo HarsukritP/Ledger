@@ -1,8 +1,11 @@
+"""Briefing endpoints — generate weekly briefing text via AI agents."""
 import logging
 import traceback
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.models import BriefingOut
+from app.services.supabase_client import get_supabase
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/briefing", tags=["briefing"])
@@ -10,14 +13,12 @@ router = APIRouter(prefix="/briefing", tags=["briefing"])
 
 @router.post("/generate", response_model=BriefingOut)
 async def generate_briefing(user=Depends(get_current_user)):
-    """Generate a weekly briefing via the Backboard Council agent.
-
-    Surfaces errors as 500s — no silent fallbacks.
-    """
+    """Generate a weekly briefing via the Backboard Council agent."""
     from app.services.backboard_service import backboard_service
 
     user_sub = user.get("sub", "")
     user_name = user.get("name", "")
+    user_db_id = user.get("db_id", "")
     logger.info(f"[BRIEFING] generating for user={user_sub}")
 
     try:
@@ -35,6 +36,17 @@ async def generate_briefing(user=Depends(get_current_user)):
             detail=f"Briefing generation failed: {str(e)}",
         )
 
+    sb = get_supabase()
+    if sb and user_db_id:
+        try:
+            sb.table("briefings").insert({
+                "user_id": user_db_id,
+                "type": "weekly",
+                "content": content,
+            }).execute()
+        except Exception as e:
+            logger.warning(f"[BRIEFING] Could not persist briefing: {e}")
+
     # Fire-and-forget push notification — don't let push failure break the response.
     try:
         from app.services.push_service import send_to_user
@@ -51,13 +63,5 @@ async def generate_briefing(user=Depends(get_current_user)):
         id="briefing_latest",
         content=content,
         audio_url=None,
-        created_at="2026-03-07T12:00:00Z",
-    )
-
-
-@router.get("/audio")
-async def get_audio(user=Depends(get_current_user)):
-    raise HTTPException(
-        status_code=501,
-        detail="ElevenLabs not configured. Set ELEVENLABS_API_KEY.",
+        created_at=datetime.utcnow().isoformat() + "Z",
     )

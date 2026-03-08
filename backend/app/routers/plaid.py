@@ -124,6 +124,22 @@ class SeedRequest(BaseModel):
     clear_existing: bool = True
 
 
+@router.post("/sandbox/clear")
+async def clear_data(user=Depends(get_current_user)):
+    """Clear all transactions and recurring charges for the current user."""
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    sb.table("transactions").delete().eq("user_id", user_db_id).execute()
+    sb.table("recurring_charges").delete().eq("user_id", user_db_id).execute()
+    sb.table("action_queue").delete().eq("user_id", user_db_id).execute()
+    logger.info(f"[PLAID] Cleared all data for user={user_db_id}")
+    return {"status": "cleared"}
+
+
 @router.post("/sandbox/seed")
 async def seed_demo_data(body: SeedRequest = SeedRequest(), user=Depends(get_current_user)):
     """Seed realistic demo transactions directly into Supabase for the current user.

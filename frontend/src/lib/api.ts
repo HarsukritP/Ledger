@@ -50,7 +50,6 @@ export const api = {
 
   dashboard: {
     briefing: () => request<any>("/dashboard/briefing"),
-    health: () => request<any>("/dashboard/health"),
     categories: (days = 30) => request<any[]>(`/dashboard/categories?days=${days}`),
     action: (id: string, response: string) =>
       request(`/dashboard/action/${id}`, {
@@ -61,12 +60,12 @@ export const api = {
 
   cashflow: {
     get: (historyDays = 30) => request<any>(`/cashflow?history_days=${historyDays}`),
-    events: () => request<any[]>("/cashflow/events"),
   },
 
   expenses: {
     list: () => request<any[]>("/expenses"),
-    get: (id: string) => request<any>(`/expenses/${id}`),
+    create: (data: { name: string; amount: number; frequency?: string; category?: string }) =>
+      request<any>("/expenses", { method: "POST", body: JSON.stringify(data) }),
     decide: (id: string, decision: string, reason?: string) =>
       request(`/expenses/${id}/decision?decision=${decision}&reason=${reason || ""}`, {
         method: "POST",
@@ -81,7 +80,6 @@ export const api = {
       request(`/goals/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) =>
       request(`/goals/${id}`, { method: "DELETE" }),
-    feasibility: () => request<any>("/goals/feasibility"),
   },
 
   chat: {
@@ -96,7 +94,6 @@ export const api = {
 
   briefing: {
     generate: () => request<any>("/briefing/generate", { method: "POST" }),
-    audio: () => request<any>("/briefing/audio"),
   },
 
   plaid: {
@@ -125,7 +122,6 @@ export const api = {
   email: {
     accounts: () => request<any>("/email/accounts"),
     authUrl: () => request<any>("/email/auth-url"),
-    callback: (code: string) => request<any>(`/email/callback?code=${encodeURIComponent(code)}`, { method: "POST" }),
     scan: () => request<any>("/email/scan", { method: "POST" }),
     unlink: (id: string) => request<any>(`/email/accounts/${id}`, { method: "DELETE" }),
   },

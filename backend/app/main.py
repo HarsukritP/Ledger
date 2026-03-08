@@ -5,8 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers import (
-    auth, plaid, dashboard, forecast, subscriptions,
-    goals, chat, briefing, settings as settings_router, push,
+    auth, plaid, dashboard, forecast, expenses,
+    goals, chat, briefing, settings as settings_router,
+    push, email,
 )
 
 # --- Structured logging: everything goes to stdout for Railway ---
@@ -33,12 +34,13 @@ app.include_router(auth.router)
 app.include_router(plaid.router)
 app.include_router(dashboard.router)
 app.include_router(forecast.router)
-app.include_router(subscriptions.router)
+app.include_router(expenses.router)
 app.include_router(goals.router)
 app.include_router(chat.router)
 app.include_router(briefing.router)
 app.include_router(settings_router.router)
 app.include_router(push.router)
+app.include_router(email.router)
 
 
 @app.on_event("startup")
@@ -56,7 +58,6 @@ async def startup_event():
         "BACKBOARD_API_KEY": bool(settings.backboard_api_key),
         "PLAID_CLIENT_ID": bool(settings.plaid_client_id),
         "PLAID_SECRET": bool(settings.plaid_secret),
-        "ELEVENLABS_API_KEY": bool(settings.elevenlabs_api_key),
         "FRONTEND_URL": settings.frontend_url,
     }
 
@@ -90,6 +91,5 @@ async def health():
             "supabase": bool(settings.supabase_url and settings.supabase_service_role_key),
             "backboard": bool(settings.backboard_api_key),
             "plaid": bool(settings.plaid_client_id and settings.plaid_secret),
-            "elevenlabs": bool(settings.elevenlabs_api_key),
         },
     }

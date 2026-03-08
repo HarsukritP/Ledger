@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { MoneyText } from "../components/finance/MoneyText";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { ActionCard } from "../components/finance/ActionCard";
-import { BriefingPlayer } from "../components/finance/BriefingPlayer";
 import { getGreeting } from "../lib/utils";
 import { api } from "../lib/api";
 import type { ActionItem, HealthMetrics, ForecastEvent } from "../types";
@@ -17,10 +16,15 @@ export function HomePage() {
   const [health, setHealth] = useState<HealthMetrics | null>(null);
   const [weekAhead, setWeekAhead] = useState<ForecastEvent[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
+  const [categories, setCategories] = useState<{ category: string; amount: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [briefingText, setBriefingText] = useState<string | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
 
   useEffect(() => {
+    api.dashboard.categories(30).then((data: any[]) => setCategories(data || [])).catch(() => {});
+
     api.dashboard
       .briefing()
       .then((data: any) => {
@@ -190,23 +194,93 @@ export function HomePage() {
         </motion.div>
       </div>
 
+      {/* Spending by Category */}
+      {categories.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-2xl border border-border bg-surface p-5"
+        >
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">This Month's Spending</h2>
+          <div className="space-y-2">
+            {categories.slice(0, 5).map((cat) => {
+              const totalSpent = categories.reduce((s, c) => s + c.amount, 0);
+              const pct = totalSpent > 0 ? (cat.amount / totalSpent) * 100 : 0;
+              return (
+                <div key={cat.category} className="flex items-center gap-3">
+                  <span className="w-32 truncate text-xs text-text-secondary">
+                    {cat.category.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  </span>
+                  <div className="flex-1">
+                    <div className="h-1.5 rounded-full bg-border">
+                      <div
+                        className="h-full rounded-full bg-gold"
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="w-16 text-right font-mono text-xs text-text-muted">
+                    ${cat.amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
+        className="rounded-2xl border border-border bg-surface p-5"
       >
-        <BriefingPlayer
-          previewText={
-            weekAhead.length > 0
-              ? `This week: ${weekAhead.filter((e) => e.type !== "income").length} bills, ${weekAhead.filter((e) => e.type === "income").length} income.${predictedLow < 500 ? ` Watch your balance — it may dip to $${Math.round(predictedLow)}.` : ""}`
-              : "Link your bank account and sync transactions to get your weekly briefing."
-          }
-          duration="0:42"
-        />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-gold" />
+            <span className="text-sm font-medium text-text-primary">Weekly Briefing</span>
+            <AgentBadge agent="pulse" />
+          </div>
+          {!briefingText && (
+            <button
+              onClick={async () => {
+                setBriefingLoading(true);
+                try {
+                  const result = await api.briefing.generate();
+                  if (result?.content) setBriefingText(result.content);
+                } catch (err) {
+                  console.error("[BRIEFING] Failed:", err);
+                } finally {
+                  setBriefingLoading(false);
+                }
+              }}
+              disabled={briefingLoading}
+              className="flex items-center gap-1.5 rounded-full bg-gold px-3 py-1 text-xs font-medium text-black transition-colors hover:bg-gold/90 disabled:opacity-50"
+            >
+              {briefingLoading ? <><Loader2 size={12} className="animate-spin" /> Generating...</> : "Generate"}
+            </button>
+          )}
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+          {briefingText
+            ? briefingText
+            : briefingLoading
+              ? "Your AI team is analyzing your finances..."
+              : weekAhead.length > 0
+                ? `This week: ${weekAhead.filter((e) => e.type !== "income").length} bills, ${weekAhead.filter((e) => e.type === "income").length} income deposits.${predictedLow < 500 ? ` Watch your balance — it may dip to $${Math.round(predictedLow)}.` : ""} Tap Generate for a full AI briefing.`
+                : "Link your bank account and sync transactions to get your weekly briefing."}
+        </p>
       </motion.div>
     </div>
   );
 }
+
+const COLOR_CLASSES = {
+  gold: "mt-1 text-xl text-gold",
+  danger: "mt-1 text-xl text-danger",
+  income: "mt-1 text-xl text-income",
+} as const;
 
 function MetricCard({
   label,
@@ -222,7 +296,7 @@ function MetricCard({
   return (
     <div className="rounded-2xl border border-border bg-surface p-4">
       <p className="text-xs text-text-muted">{label}</p>
-      <MoneyText value={value} animated className={`mt-1 text-xl text-${color}`} />
+      <MoneyText value={value} animated className={COLOR_CLASSES[color]} />
       <p className="mt-1 text-xs text-text-secondary">{sub}</p>
     </div>
   );
