@@ -62,12 +62,12 @@ export const api = {
       }),
   },
 
-  forecast: {
+  cashflow: {
     get: (historyDays = 30) => request<any>(`/cashflow?history_days=${historyDays}`),
     events: () => request<any[]>("/cashflow/events"),
   },
 
-  subscriptions: {
+  expenses: {
     list: () => request<any[]>("/expenses"),
     get: (id: string) => request<any>(`/expenses/${id}`),
     decide: (id: string, decision: string, reason?: string) =>
