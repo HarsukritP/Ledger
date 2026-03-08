@@ -204,7 +204,15 @@ class EmailService:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 emails = [r for r in results if isinstance(r, dict)]
 
-                logger.info(f"[EMAIL] Fetched {len(emails)} emails, sending to LLM in batches")
+                if emails:
+                    sample = emails[0]
+                    logger.info(
+                        f"[EMAIL] Fetched {len(emails)} emails, sending to LLM in batches. "
+                        f"Sample: from={sample['from'][:50]} subj={sample['subject'][:60]} "
+                        f"body_len={len(sample['body'])}"
+                    )
+                else:
+                    logger.warning("[EMAIL] Fetched 0 emails after filtering")
 
                 all_charges: list[dict] = []
                 for i in range(0, len(emails), BATCH_SIZE):
@@ -245,12 +253,14 @@ class EmailService:
             headers = {h["name"]: h["value"] for h in data.get("payload", {}).get("headers", [])}
 
             body_text = self._extract_body_text(data.get("payload", {}))
+            if not body_text:
+                body_text = data.get("snippet", "")
 
             return {
                 "subject": headers.get("Subject", ""),
                 "from": headers.get("From", ""),
                 "date": headers.get("Date", ""),
-                "body": body_text[:500],
+                "body": body_text[:800],
             }
         except Exception as e:
             logger.warning(f"Could not fetch email {msg_id}: {e}")
@@ -268,12 +278,24 @@ class EmailService:
                 except Exception:
                     return ""
 
+        if mime == "text/html":
+            body_data = payload.get("body", {}).get("data", "")
+            if body_data:
+                try:
+                    import re
+                    html = base64.urlsafe_b64decode(body_data).decode("utf-8", errors="replace")
+                    text = re.sub(r"<[^>]+>", " ", html)
+                    text = re.sub(r"\s+", " ", text).strip()
+                    return text
+                except Exception:
+                    return ""
+
         for part in payload.get("parts", []):
             text = self._extract_body_text(part)
             if text:
                 return text
 
-        return payload.get("snippet", "")
+        return ""
 
     # ------------------------------------------------------------------
     # LLM extraction via Backboard Audit specialist
