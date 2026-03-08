@@ -69,6 +69,9 @@ async def sync_transactions(user=Depends(get_current_user)):
     except PlaidError as e:
         logger.error(f"[PLAID] /sync failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.exception(f"[PLAID] /sync unhandled crash: {e}")
+        raise HTTPException(status_code=500, detail=f"Sync failed unexpectedly: {e}")
 
 
 @router.get("/accounts")

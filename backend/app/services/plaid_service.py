@@ -314,6 +314,9 @@ class PlaidService:
         amount = txn.get("amount", 0)
         txn_type = "expense" if amount > 0 else "income"
 
+        pfc = txn.get("personal_finance_category") or {}
+        detailed = pfc.get("detailed", "") if isinstance(pfc, dict) else ""
+
         row = {
             "user_id": user_db_id,
             "plaid_transaction_id": plaid_id,
@@ -323,7 +326,7 @@ class PlaidService:
             "merchant_name": txn.get("merchant_name") or txn.get("name", ""),
             "category": category,
             "type": txn_type,
-            "is_recurring": bool(txn.get("personal_finance_category", {}).get("detailed", "").startswith("SUBSCRIPTION")),
+            "is_recurring": bool(detailed.startswith("SUBSCRIPTION")),
         }
 
         existing = sb.table("transactions").select("id").eq(
