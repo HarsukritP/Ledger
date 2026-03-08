@@ -80,7 +80,8 @@ export function ForecastPage() {
           <h1 className="text-2xl font-bold tracking-tight text-text-primary">Next 30 Days</h1>
           <AgentBadge agent="pulse" />
         </div>
-        <div className="mt-2 flex items-baseline gap-4">
+        <p className="mt-2 text-xs text-text-muted">Current Balance</p>
+        <div className="flex items-baseline gap-4">
           <MoneyText value={data.startBalance} animated className="text-3xl text-gold" />
           {data.predictedLow < data.dangerThreshold && lowDateFormatted && (
             <span className="text-sm text-warning">

@@ -255,18 +255,22 @@ class DataService:
                     "category": category,
                 })
 
-        txns = self.get_transactions(user_db_id, days=60)
+        txns = self.get_transactions(user_db_id, days=90)
         income_txns = [t for t in txns if t.get("type") == "income"]
         if income_txns:
-            income_dates = defaultdict(list)
+            income_dates: dict[int, list[float]] = defaultdict(list)
             for t in income_txns:
                 try:
                     d = date.fromisoformat(t["date"])
-                    income_dates[d.day].append(float(t.get("amount", 0)))
+                    amt = float(t.get("amount", 0))
+                    if amt >= 100:
+                        income_dates[d.day].append(amt)
                 except (ValueError, KeyError):
                     pass
 
             for day_of_month, amounts in income_dates.items():
+                if len(amounts) < 2:
+                    continue
                 avg_income = sum(amounts) / len(amounts)
                 next_pay = today.replace(day=min(day_of_month, 28))
                 if next_pay <= today:
@@ -276,10 +280,15 @@ class DataService:
                         next_pay = next_pay.replace(year=today.year + 1, month=1)
 
                 if next_pay <= today + timedelta(days=30):
+                    merchant = next(
+                        (t.get("merchant_name", "Paycheck") for t in income_txns
+                         if float(t.get("amount", 0)) >= 100),
+                        "Paycheck",
+                    )
                     events.append({
                         "id": f"inc_{day_of_month}",
                         "date": next_pay.isoformat(),
-                        "name": income_txns[0].get("merchant_name", "Paycheck"),
+                        "name": merchant,
                         "amount": round(avg_income, 2),
                         "type": "income",
                         "category": "Income",
