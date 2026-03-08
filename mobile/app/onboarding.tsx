@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Pressable,
+  TouchableOpacity,
   TextInput,
   ScrollView,
   ActivityIndicator,
@@ -156,9 +157,9 @@ function LinkBankStep({ onNext }: { onNext: () => void }) {
   const handlePlaidSuccess = async (publicToken: string) => {
     try {
       await api.plaid.exchange(publicToken);
-      const accounts = await api.plaid.accounts();
-      setLinkedAccounts(accounts || []);
       setLinked(true);
+      // kick off sync in background — don't block progression
+      api.plaid.sync().catch(() => {});
     } catch (e: any) {
       setError(e.message);
     }
@@ -203,18 +204,18 @@ function LinkBankStep({ onNext }: { onNext: () => void }) {
         </View>
       ) : (
         <View style={{ width: "100%", borderRadius: 16, borderWidth: 1, borderColor: "#34D39930", backgroundColor: "#34D39910", padding: 16 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 12 }}>
-            <Feather name="check-circle" size={18} color="#34D399" />
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#34D399" }}>Account linked!</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}>
+            <Feather name="check-circle" size={20} color="#34D399" />
+            <Text style={{ fontSize: 16, fontWeight: "600", color: "#34D399" }}>Bank linked successfully!</Text>
           </View>
-          {linkedAccounts.map((acct: any, i: number) => (
-            <Text key={i} style={{ fontSize: 12, color: "#A1A1AA", textAlign: "center" }}>
-              {acct.name} • ${acct.balance_current?.toLocaleString() ?? "—"}
-            </Text>
-          ))}
-          <Pressable onPress={onNext} style={{ marginTop: 16, alignItems: "center", borderRadius: 9999, backgroundColor: "#D4A853", paddingVertical: 12 }}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#000" }}>Continue</Text>
-          </Pressable>
+          <TouchableOpacity
+            onPress={onNext}
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            style={{ alignItems: "center", borderRadius: 9999, backgroundColor: "#D4A853", paddingVertical: 14 }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#000" }}>Continue →</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
