@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowRight, Building2, DollarSign, MessageSquare, Users, Loader2,
+  ArrowRight, Building2, DollarSign, Users, Loader2,
   AlertTriangle, CheckCircle2, Mail, Plus, X, Target, Home as HomeIcon,
   Wifi, Smartphone, Dumbbell, Tv, Cloud, Car, ShieldCheck, ShoppingCart,
 } from "lucide-react";
@@ -47,8 +47,6 @@ export function OnboardingPage() {
   );
   const [customExpense, setCustomExpense] = useState("");
   const [customAmount, setCustomAmount] = useState("");
-
-  const [linkEmail, setLinkEmail] = useState(false);
 
   const [paysRent, setPaysRent] = useState<boolean | null>(null);
   const [rent, setRent] = useState("");
@@ -187,7 +185,7 @@ export function OnboardingPage() {
               onNext={next}
             />
           )}
-          {step === 3 && <EmailStep onNext={next} linkEmail={linkEmail} setLinkEmail={setLinkEmail} />}
+          {step === 3 && <EmailStep onNext={next} />}
           {step === 4 && (
             <LivingCostsStep
               paysRent={paysRent}
@@ -445,8 +443,8 @@ function ExpensesStep({
   );
 }
 
-function EmailStep({ onNext, linkEmail, setLinkEmail }: {
-  onNext: () => void; linkEmail: boolean; setLinkEmail: (v: boolean) => void;
+function EmailStep({ onNext }: {
+  onNext: () => void;
 }) {
   const [linking, setLinking] = useState(false);
 

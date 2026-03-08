@@ -85,7 +85,6 @@ export function CashflowPage() {
     : null;
 
   const allEvents = [...data.historyEvents, ...data.forecastEvents];
-  const todayStr = new Date().toISOString().split("T")[0];
 
   return (
     <div className="space-y-8">

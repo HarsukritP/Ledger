@@ -26,7 +26,6 @@ export function CashFlowChart({
   const chartH = height - padding.top - padding.bottom;
 
   const hasHistory = historyEvents.length > 0;
-  const hasForecast = forecastEvents.length > 0 || (events && events.length > 0);
   const effectiveForecast = forecastEvents.length > 0 ? forecastEvents : (events || []);
 
   const { historyPoints, forecastPoints, minVal, maxVal, todayIndex } = useMemo(() => {
