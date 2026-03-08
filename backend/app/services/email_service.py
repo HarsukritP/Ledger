@@ -17,8 +17,18 @@ GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1"
 
 BILLING_KEYWORDS = [
     "receipt", "invoice", "payment confirmation", "subscription",
-    "billing statement", "payment received", "your order",
-    "renewal", "charged", "autopay", "monthly statement",
+    "billing statement", "payment received", "renewal",
+    "charged", "autopay", "monthly statement",
+    "your membership", "plan renewal", "payment processed",
+    "transaction receipt", "billing receipt", "recurring payment",
+    "automatic payment", "your bill", "statement ready",
+    "netflix", "spotify", "apple", "google play",
+    "amazon prime", "adobe", "hulu", "disney+",
+    "youtube premium", "dropbox", "microsoft 365",
+    "icloud", "chatgpt", "openai", "notion",
+    "figma", "canva", "grammarly", "nordvpn",
+    "crunchyroll", "paramount+", "peacock",
+    "t-mobile", "verizon", "at&t", "comcast", "xfinity",
 ]
 
 EXTRACTION_PROMPT = """Analyze these billing/receipt emails and extract ONLY recurring subscriptions or recurring charges.

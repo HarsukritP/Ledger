@@ -1,5 +1,7 @@
-"""Expenses endpoints — recurring charges (bills, subscriptions, rent) detected from Plaid transactions."""
+"""Expenses endpoints — recurring charges (bills, subscriptions, rent) from Plaid, email, or manual entry."""
 import logging
+from pydantic import BaseModel
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.services.data_service import data_service
@@ -8,6 +10,48 @@ from app.services.supabase_client import get_supabase
 logger = logging.getLogger("ledger.expenses")
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
+
+
+class ExpenseCreate(BaseModel):
+    name: str
+    amount: float
+    frequency: str = "monthly"
+    category: str = "GENERAL_SERVICES"
+
+
+@router.post("")
+async def create_expense(body: ExpenseCreate, user=Depends(get_current_user)):
+    user_db_id = user.get("db_id")
+    if not user_db_id:
+        raise HTTPException(status_code=400, detail="User not found in database")
+
+    sb = get_supabase()
+    if not sb:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    try:
+        result = sb.table("recurring_charges").insert({
+            "user_id": user_db_id,
+            "merchant_name": body.name,
+            "average_amount": body.amount,
+            "frequency": body.frequency,
+            "category": body.category,
+            "value_score": 3,
+            "status": "active",
+            "source": "manual",
+        }).execute()
+        row = result.data[0] if result.data else {}
+        return {
+            "id": str(row.get("id", "")),
+            "name": body.name,
+            "amount": body.amount,
+            "frequency": body.frequency,
+            "category": body.category,
+            "status": "active",
+        }
+    except Exception as e:
+        logger.error(f"[EXPENSES] create failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("")

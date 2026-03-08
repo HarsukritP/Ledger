@@ -67,6 +67,8 @@ export const api = {
   expenses: {
     list: () => request<any[]>("/expenses"),
     get: (id: string) => request<any>(`/expenses/${id}`),
+    create: (data: { name: string; amount: number; frequency?: string; category?: string }) =>
+      request<any>("/expenses", { method: "POST", body: JSON.stringify(data) }),
     decide: (id: string, decision: string, reason?: string) =>
       request(`/expenses/${id}/decision?decision=${decision}&reason=${reason || ""}`, {
         method: "POST",
