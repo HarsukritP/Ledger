@@ -1,5 +1,6 @@
 """Cashflow endpoints — past history + future 30-day forecast from real transaction data."""
 import logging
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.services.data_service import data_service
@@ -31,6 +32,29 @@ async def get_cashflow(history_days: int = 30, user=Depends(get_current_user)):
             if running < low:
                 low = running
                 low_date = e["date"]
+
+        # Push notification if balance is projected to go negative within 7 days.
+        try:
+            week_out = (date.today() + timedelta(days=7)).isoformat()
+            running_check = balance
+            for e in forecast_events:
+                if e.get("date", "9999") > week_out:
+                    break
+                if e["type"] == "income":
+                    running_check += e["amount"]
+                else:
+                    running_check -= e["amount"]
+
+            if running_check < 0:
+                from app.services.push_service import send_to_user
+                send_to_user(
+                    user_db_id,
+                    title="⚠️ Balance at risk",
+                    body=f"Your balance is projected to go negative (${running_check:,.2f}) within the next 7 days.",
+                    data={"type": "cashflow_risk", "projected_balance": round(running_check, 2)},
+                )
+        except Exception:
+            pass
 
         return {
             "current_balance": round(balance, 2),

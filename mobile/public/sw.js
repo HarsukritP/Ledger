@@ -15,6 +15,7 @@ self.addEventListener("push", (event) => {
   const iconMap = {
     briefing: "/icon-briefing.png",
     low_balance: "/icon-alert.png",
+    cashflow_risk: "/icon-alert.png",
     default: "/icon.png",
   };
   const type = payload.data?.type || "default";
@@ -41,6 +42,7 @@ self.addEventListener("notificationclick", (event) => {
   const routes = {
     briefing: "/",
     low_balance: "/(app)",
+    cashflow_risk: "/(app)/forecast",
   };
   const path = routes[type] || "/";
 
