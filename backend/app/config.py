@@ -21,7 +21,7 @@ class Settings:
 
     backboard_api_key: str = os.getenv("BACKBOARD_API_KEY", "")
     llm_provider: str = os.getenv("LLM_PROVIDER", "openai")
-    llm_model: str = os.getenv("LLM_MODEL", "o4-mini")
+    llm_model: str = os.getenv("LLM_MODEL", "gpt-4.1-mini")
 
     elevenlabs_api_key: str = os.getenv("ELEVENLABS_API_KEY", "")
 
