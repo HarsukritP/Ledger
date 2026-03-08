@@ -237,8 +237,9 @@ class PlaidService:
                 total_modified += modified
                 total_removed += removed
 
+                from datetime import datetime
                 sb.table("linked_accounts").update({
-                    "last_synced_at": "now()",
+                    "last_synced_at": datetime.utcnow().isoformat(),
                 }).eq("id", linked["id"]).execute()
 
             except PlaidError as e:
@@ -264,10 +265,10 @@ class PlaidService:
         has_more = True
 
         while has_more:
-            request = TransactionsSyncRequest(
-                access_token=access_token,
-                cursor=cursor if cursor else None,
-            )
+            kwargs = {"access_token": access_token}
+            if cursor:
+                kwargs["cursor"] = cursor
+            request = TransactionsSyncRequest(**kwargs)
             try:
                 response = client.transactions_sync(request)
                 data = response.to_dict()
