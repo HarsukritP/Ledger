@@ -18,10 +18,14 @@ export function AgentBadge({ agent, className }: AgentBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
         className
       )}
-      style={{ color: info.color, backgroundColor: info.bgColor }}
+      style={{
+        color: info.color,
+        backgroundColor: info.bgColor,
+        borderColor: `${info.color}30`,
+      }}
     >
       <span
         className="h-1.5 w-1.5 rounded-full"

@@ -5,6 +5,7 @@ interface GoalRingProps {
   progress: number;
   size?: number;
   strokeWidth?: number;
+  color?: string;
   className?: string;
   children?: React.ReactNode;
 }
@@ -13,6 +14,7 @@ export function GoalRing({
   progress,
   size = 120,
   strokeWidth = 6,
+  color = "#22C55E",
   className,
   children,
 }: GoalRingProps) {
@@ -28,7 +30,7 @@ export function GoalRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#27272A"
+          className="stroke-border"
           strokeWidth={strokeWidth}
         />
         <motion.circle
@@ -36,7 +38,7 @@ export function GoalRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#D4A853"
+          stroke={color}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}

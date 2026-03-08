@@ -17,15 +17,17 @@ import { AgentBadge } from "../../components/finance/AgentBadge";
 import { MoneyText } from "../../components/finance/MoneyText";
 import { GoalRing } from "../../components/finance/GoalRing";
 import { api } from "../../lib/api";
+import { useTheme } from "../../lib/theme";
 import type { Goal } from "../../types";
 
 const FEASIBILITY_STYLES = {
-  on_track: { label: "On Track", color: "#34D399", bg: "#34D39915" },
-  at_risk: { label: "At Risk", color: "#F59E0B", bg: "#F59E0B15" },
+  on_track: { label: "On Track", color: "#22C55E", bg: "#22C55E15" },
+  at_risk: { label: "At Risk", color: "#F97316", bg: "#F9731615" },
   behind: { label: "Behind", color: "#EF4444", bg: "#EF444415" },
 } as const;
 
 export default function GoalsScreen() {
+  const { colors } = useTheme();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -100,23 +102,24 @@ export default function GoalsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-base items-center justify-center gap-3">
-        <ActivityIndicator size="large" color="#D4A853" />
-        <Text className="text-sm text-text-muted">Loading your goals...</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} className="items-center justify-center gap-3">
+        <ActivityIndicator size="large" color={colors.gold} />
+        <Text className="text-sm" style={{ color: colors.textMuted }}>Loading your goals...</Text>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-base px-4 items-center justify-center">
-        <View className="rounded-2xl border border-danger/20 bg-danger/5 p-6 w-full items-center">
-          <Text className="text-sm text-danger text-center mb-3">{error}</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} className="px-4 items-center justify-center">
+        <View className="rounded-2xl border p-6 w-full items-center" style={{ borderColor: colors.danger + "33", backgroundColor: colors.danger + "0D" }}>
+          <Text className="text-sm text-center mb-3" style={{ color: colors.danger }}>{error}</Text>
           <Pressable
             onPress={() => loadGoals()}
-            className="rounded-full bg-gold px-5 py-2"
+            className="rounded-full px-5 py-2"
+            style={{ backgroundColor: colors.gold }}
           >
-            <Text className="text-xs font-medium text-black">Retry</Text>
+            <Text className="text-xs font-medium" style={{ color: "#000" }}>Retry</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -124,7 +127,7 @@ export default function GoalsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-base">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, gap: 20 }}
@@ -132,7 +135,7 @@ export default function GoalsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => loadGoals(true)}
-            tintColor="#D4A853"
+            tintColor={colors.gold}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -140,30 +143,32 @@ export default function GoalsScreen() {
         {/* Header */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
-            <Text className="text-2xl font-bold tracking-tight text-text-primary">
+            <Text className="text-2xl font-bold tracking-tight" style={{ color: colors.textPrimary }}>
               Goals
             </Text>
             <AgentBadge agent="north-star" />
           </View>
           <Pressable
             onPress={() => setShowCreate(true)}
-            className="flex-row items-center gap-1.5 rounded-full bg-gold px-4 py-2"
+            className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
+            style={{ backgroundColor: colors.gold }}
           >
             <Feather name="plus" size={14} color="#000" />
-            <Text className="text-xs font-medium text-black">Add Goal</Text>
+            <Text className="text-xs font-medium" style={{ color: "#000" }}>Add Goal</Text>
           </Pressable>
         </View>
 
         {goals.length === 0 ? (
-          <View className="rounded-2xl border border-border bg-surface p-8 items-center">
-            <Text className="text-sm text-text-muted text-center mb-4">
+          <View className="rounded-2xl border p-8 items-center" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
+            <Text className="text-sm text-center mb-4" style={{ color: colors.textMuted }}>
               No goals yet. Create your first savings goal to get started.
             </Text>
             <Pressable
               onPress={() => setShowCreate(true)}
-              className="rounded-full bg-gold px-6 py-2"
+              className="rounded-full px-6 py-2"
+              style={{ backgroundColor: colors.gold }}
             >
-              <Text className="text-xs font-medium text-black">
+              <Text className="text-xs font-medium" style={{ color: "#000" }}>
                 Create Goal
               </Text>
             </Pressable>
@@ -184,19 +189,21 @@ export default function GoalsScreen() {
                 <Pressable
                   key={goal.id}
                   onPress={() => setSelectedGoal(goal)}
-                  className="rounded-2xl border border-border bg-surface p-4"
+                  className="rounded-2xl border p-4"
+                  style={{ borderColor: colors.border, backgroundColor: colors.surface }}
                 >
                   <View className="flex-row items-center gap-4">
                     <GoalRing progress={progress} size={80} strokeWidth={5}>
-                      <Text className="font-mono text-sm font-medium text-gold">
+                      <Text className="font-mono text-sm font-medium" style={{ color: colors.northStar }}>
                         {Math.round(progress * 100)}%
                       </Text>
                     </GoalRing>
                     <View className="flex-1">
                       <View className="flex-row items-center gap-2 flex-wrap">
                         <Text
-                          className="text-base font-semibold text-text-primary"
+                          className="text-base font-semibold"
                           numberOfLines={1}
+                          style={{ color: colors.textPrimary }}
                         >
                           {goal.name}
                         </Text>
@@ -215,13 +222,14 @@ export default function GoalsScreen() {
                       <View className="flex-row items-baseline gap-1 mt-1">
                         <MoneyText
                           value={goal.currentAmount}
-                          className="text-lg text-gold"
+                          className="text-lg"
+                          style={{ color: colors.northStar }}
                         />
-                        <Text className="text-sm text-text-muted">
+                        <Text className="text-sm" style={{ color: colors.textMuted }}>
                           / ${goal.targetAmount.toLocaleString()}
                         </Text>
                       </View>
-                      <Text className="text-xs text-text-secondary mt-1">
+                      <Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>
                         ${Math.round(goal.monthlyContribution)}/mo ·{" "}
                         {goal.targetDate
                           ? new Date(
@@ -253,19 +261,21 @@ export default function GoalsScreen() {
           className="flex-1"
         >
           <Pressable
-            className="flex-1 items-center justify-center bg-black/60 px-4"
+            className="flex-1 items-center justify-center px-4"
+            style={{ backgroundColor: colors.overlay }}
             onPress={() => setShowCreate(false)}
           >
             <Pressable
               onPress={(e) => e.stopPropagation()}
-              className="w-full rounded-2xl border border-border bg-surface p-6"
+              className="w-full rounded-2xl border p-6"
+              style={{ borderColor: colors.border, backgroundColor: colors.surface }}
             >
               <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-lg font-bold text-text-primary">
+                <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>
                   New Goal
                 </Text>
                 <Pressable onPress={() => setShowCreate(false)}>
-                  <Feather name="x" size={20} color="#71717A" />
+                  <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>
               </View>
               <View className="gap-3">
@@ -273,34 +283,37 @@ export default function GoalsScreen() {
                   placeholder="Goal name (e.g. Japan Trip)"
                   value={newName}
                   onChangeText={setNewName}
-                  placeholderTextColor="#71717A"
-                  className="w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary"
+                  placeholderTextColor={colors.textMuted}
+                  className="w-full rounded-xl border px-4 py-2.5 text-sm"
+                  style={{ borderColor: colors.border, backgroundColor: colors.bg, color: colors.textPrimary }}
                 />
                 <TextInput
                   placeholder="Target amount ($)"
                   value={newTarget}
                   onChangeText={setNewTarget}
                   keyboardType="decimal-pad"
-                  placeholderTextColor="#71717A"
-                  className="w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary"
+                  placeholderTextColor={colors.textMuted}
+                  className="w-full rounded-xl border px-4 py-2.5 text-sm"
+                  style={{ borderColor: colors.border, backgroundColor: colors.bg, color: colors.textPrimary }}
                 />
                 <TextInput
                   placeholder="Target date (YYYY-MM-DD)"
                   value={newDate}
                   onChangeText={setNewDate}
-                  placeholderTextColor="#71717A"
-                  className="w-full rounded-xl border border-border bg-base px-4 py-2.5 text-sm text-text-primary"
+                  placeholderTextColor={colors.textMuted}
+                  className="w-full rounded-xl border px-4 py-2.5 text-sm"
+                  style={{ borderColor: colors.border, backgroundColor: colors.bg, color: colors.textPrimary }}
                 />
                 <Pressable
                   onPress={handleCreate}
                   disabled={creating || !newName || !newTarget}
-                  className="w-full rounded-full bg-gold py-2.5 items-center"
-                  style={{ opacity: creating || !newName || !newTarget ? 0.5 : 1 }}
+                  className="w-full rounded-full py-2.5 items-center"
+                  style={{ backgroundColor: colors.gold, opacity: creating || !newName || !newTarget ? 0.5 : 1 }}
                 >
                   {creating ? (
                     <ActivityIndicator size="small" color="#000" />
                   ) : (
-                    <Text className="text-sm font-medium text-black">
+                    <Text className="text-sm font-medium" style={{ color: "#000" }}>
                       Create Goal
                     </Text>
                   )}
@@ -319,20 +332,22 @@ export default function GoalsScreen() {
         onRequestClose={() => setSelectedGoal(null)}
       >
         <Pressable
-          className="flex-1 items-center justify-center bg-black/60 px-4"
+          className="flex-1 items-center justify-center px-4"
+          style={{ backgroundColor: colors.overlay }}
           onPress={() => setSelectedGoal(null)}
         >
           {selectedGoal && (
             <Pressable
               onPress={(e) => e.stopPropagation()}
-              className="w-full rounded-2xl border border-border bg-surface p-6"
+              className="w-full rounded-2xl border p-6"
+              style={{ borderColor: colors.border, backgroundColor: colors.surface }}
             >
               <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-text-primary flex-1 mr-4" numberOfLines={1}>
+                <Text className="text-xl font-bold flex-1 mr-4" numberOfLines={1} style={{ color: colors.textPrimary }}>
                   {selectedGoal.name}
                 </Text>
                 <Pressable onPress={() => setSelectedGoal(null)}>
-                  <Feather name="x" size={20} color="#71717A" />
+                  <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>
               </View>
 
@@ -347,7 +362,7 @@ export default function GoalsScreen() {
                   strokeWidth={8}
                 >
                   <View className="items-center">
-                    <Text className="font-mono text-2xl font-medium text-gold">
+                    <Text className="font-mono text-2xl font-medium" style={{ color: colors.northStar }}>
                       {Math.round(
                         selectedGoal.targetAmount > 0
                           ? (selectedGoal.currentAmount /
@@ -357,32 +372,32 @@ export default function GoalsScreen() {
                       )}
                       %
                     </Text>
-                    <Text className="text-xs text-text-muted">complete</Text>
+                    <Text className="text-xs" style={{ color: colors.textMuted }}>complete</Text>
                   </View>
                 </GoalRing>
               </View>
 
               <View className="gap-3 mb-4">
                 <View className="flex-row justify-between">
-                  <Text className="text-sm text-text-secondary">Progress</Text>
-                  <Text className="text-sm text-text-primary">
+                  <Text className="text-sm" style={{ color: colors.textSecondary }}>Progress</Text>
+                  <Text className="text-sm" style={{ color: colors.textPrimary }}>
                     ${selectedGoal.currentAmount.toLocaleString()} / $
                     {selectedGoal.targetAmount.toLocaleString()}
                   </Text>
                 </View>
                 <View className="flex-row justify-between">
-                  <Text className="text-sm text-text-secondary">
+                  <Text className="text-sm" style={{ color: colors.textSecondary }}>
                     Monthly Needed
                   </Text>
-                  <Text className="font-mono text-sm text-text-primary">
+                  <Text className="font-mono text-sm" style={{ color: colors.textPrimary }}>
                     ${Math.round(selectedGoal.monthlyContribution)}/mo
                   </Text>
                 </View>
                 <View className="flex-row justify-between">
-                  <Text className="text-sm text-text-secondary">
+                  <Text className="text-sm" style={{ color: colors.textSecondary }}>
                     Target Date
                   </Text>
-                  <Text className="text-sm text-text-primary">
+                  <Text className="text-sm" style={{ color: colors.textPrimary }}>
                     {selectedGoal.targetDate
                       ? new Date(
                           selectedGoal.targetDate + "T12:00:00"
@@ -395,9 +410,9 @@ export default function GoalsScreen() {
                 </View>
               </View>
 
-              <View className="rounded-xl border border-border bg-base p-4 mb-4">
+              <View className="rounded-xl border p-4 mb-4" style={{ borderColor: colors.border, backgroundColor: colors.bg }}>
                 <AgentBadge agent="north-star" />
-                <Text className="mt-2 text-sm text-text-secondary leading-5">
+                <Text className="mt-2 text-sm leading-5" style={{ color: colors.textSecondary }}>
                   {selectedGoal.feasibility === "at_risk"
                     ? "This goal needs attention. Consider increasing monthly contributions or extending the deadline."
                     : selectedGoal.feasibility === "behind"
@@ -408,9 +423,10 @@ export default function GoalsScreen() {
 
               <Pressable
                 onPress={() => handleDelete(selectedGoal.id)}
-                className="w-full rounded-full border border-danger/30 py-2 items-center"
+                className="w-full rounded-full border py-2 items-center"
+                style={{ borderColor: colors.danger + "4D" }}
               >
-                <Text className="text-xs font-medium text-danger">
+                <Text className="text-xs font-medium" style={{ color: colors.danger }}>
                   Delete Goal
                 </Text>
               </Pressable>

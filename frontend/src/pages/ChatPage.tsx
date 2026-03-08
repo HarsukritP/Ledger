@@ -22,12 +22,8 @@ const SUGGESTIONS = [
 function mapAgent(backend: string | undefined): AgentName | undefined {
   if (!backend) return undefined;
   const map: Record<string, AgentName> = {
-    pulse: "pulse",
-    audit: "audit",
-    north_star: "north-star",
-    "north-star": "north-star",
-    sentinel: "sentinel",
-    council: "pulse",
+    pulse: "pulse", audit: "audit", north_star: "north-star",
+    "north-star": "north-star", sentinel: "sentinel", council: "pulse",
   };
   return map[backend] ?? "pulse";
 }
@@ -50,59 +46,38 @@ export function ChatPage() {
       .then((history) => {
         if (!history || history.length === 0) return;
         const mapped: Message[] = history.map((h: any) => ({
-          id: h.id,
-          role: h.role === "agent" ? "agent" : h.role === "error" ? "error" : "user",
-          agent: mapAgent(h.agent),
-          text: h.text,
+          id: h.id, role: h.role === "agent" ? "agent" : h.role === "error" ? "error" : "user",
+          agent: mapAgent(h.agent), text: h.text,
         }));
         setMessages(mapped);
       })
-      .catch((err) => {
-        console.error("Failed to load chat history:", err);
-      })
+      .catch((err) => { console.error("Failed to load chat history:", err); })
       .finally(() => setHistoryLoading(false));
   }, []);
 
   const clearChat = useCallback(async () => {
     setClearing(true);
-    try {
-      await api.chat.clear();
-      setMessages([]);
-    } catch (err) {
-      console.error("Failed to clear chat:", err);
-    } finally {
-      setClearing(false);
-    }
+    try { await api.chat.clear(); setMessages([]); }
+    catch (err) { console.error("Failed to clear chat:", err); }
+    finally { setClearing(false); }
   }, []);
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
-
-    const userMsg: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      text: text.trim(),
-    };
+    const userMsg: Message = { id: `user-${Date.now()}`, role: "user", text: text.trim() };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
-
     try {
       const response = await api.chat.send(text.trim());
       const agentMsg: Message = {
-        id: response.id || `agent-${Date.now()}`,
-        role: "agent",
-        agent: mapAgent(response.agent),
-        text: response.text,
+        id: response.id || `agent-${Date.now()}`, role: "agent",
+        agent: mapAgent(response.agent), text: response.text,
       };
       setMessages((prev) => [...prev, agentMsg]);
     } catch (err: any) {
       console.error("Chat send failed:", err);
-      const errorMsg: Message = {
-        id: `err-${Date.now()}`,
-        role: "error",
-        text: `Agent error: ${err.message}`,
-      };
+      const errorMsg: Message = { id: `err-${Date.now()}`, role: "error", text: `Agent error: ${err.message}` };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setLoading(false);
@@ -113,21 +88,13 @@ export function ChatPage() {
     <div className="flex h-[calc(100vh-8rem)] flex-col md:h-[calc(100vh-4rem)]">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-            Talk to Ledger
-          </h1>
-          <p className="text-sm text-text-muted">
-            Ask anything about your finances — your agents are listening
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Talk to Ledger</h1>
+          <p className="text-sm text-text-muted">Ask anything about your finances — your agents are listening</p>
         </div>
         {messages.length > 0 && (
-          <button
-            onClick={clearChat}
-            disabled={clearing}
-            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-danger/30 hover:text-danger disabled:opacity-50"
-          >
-            {clearing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-            Clear
+          <button onClick={clearChat} disabled={clearing}
+            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-danger/30 hover:text-danger disabled:opacity-50">
+            {clearing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Clear
           </button>
         )}
       </div>
@@ -143,95 +110,61 @@ export function ChatPage() {
         {messages.map((msg) => (
           <motion.div
             key={msg.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={
-              msg.role === "user"
-                ? "flex justify-end"
-                : "flex justify-start"
-            }
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}
           >
             {msg.role === "error" ? (
-              <div className="max-w-[85%] rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3">
-                <div className="mb-1 flex items-center gap-2 text-red-400">
+              <div className="max-w-[85%] rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3">
+                <div className="mb-1 flex items-center gap-2 text-danger">
                   <AlertTriangle size={14} />
                   <span className="text-xs font-medium">Error</span>
                 </div>
-                <p className="font-mono text-xs leading-relaxed text-red-300">
-                  {msg.text}
-                </p>
+                <p className="font-mono text-xs leading-relaxed text-danger/80">{msg.text}</p>
               </div>
             ) : (
-              <div
-                className={
-                  msg.role === "user"
-                    ? "max-w-[75%] rounded-2xl bg-surface-raised px-4 py-3"
-                    : "max-w-[85%] rounded-2xl border border-border bg-surface px-4 py-3"
-                }
-              >
-                {msg.agent && (
-                  <AgentBadge agent={msg.agent} className="mb-2" />
-                )}
-                <p className="text-sm leading-relaxed text-text-primary whitespace-pre-wrap">
-                  {msg.text}
-                </p>
+              <div className={
+                msg.role === "user"
+                  ? "max-w-[75%] rounded-2xl bg-gold/10 px-4 py-3"
+                  : "card max-w-[85%] px-4 py-3"
+              }>
+                {msg.agent && <AgentBadge agent={msg.agent} className="mb-2" />}
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-text-primary">{msg.text}</p>
               </div>
             )}
           </motion.div>
         ))}
 
         {loading && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-start"
-          >
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
+            <div className="card flex items-center gap-3 px-4 py-3">
               <Loader2 size={16} className="animate-spin text-gold" />
-              <span className="text-sm text-text-muted">
-                Agents are thinking...
-              </span>
+              <span className="text-sm text-text-muted">Agents are thinking...</span>
             </div>
           </motion.div>
         )}
-
         <div ref={bottomRef} />
       </div>
 
       <div className="mt-3 flex gap-2 overflow-x-auto py-1">
         {SUGGESTIONS.map((s) => (
-          <button
-            key={s}
-            onClick={() => send(s)}
-            disabled={loading}
-            className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
-          >
+          <button key={s} onClick={() => send(s)} disabled={loading}
+            className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:opacity-40">
             {s}
           </button>
         ))}
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        <div className="relative flex-1">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send(input)}
-            placeholder="Ask Ledger anything..."
-            disabled={loading}
-            className="w-full rounded-full border border-border bg-surface px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-gold/50 focus:outline-none disabled:opacity-50"
-          />
-        </div>
-        <button
-          onClick={() => send(input)}
-          disabled={loading || !input.trim()}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold text-black hover:bg-gold/90 disabled:opacity-40"
-        >
-          {loading ? (
-            <Loader2 size={18} className="animate-spin" />
-          ) : (
-            <Send size={18} />
-          )}
+      <div className="glass mt-3 flex items-center gap-2 rounded-2xl p-2">
+        <input
+          value={input} onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && send(input)}
+          placeholder="Ask Ledger anything..."
+          disabled={loading}
+          className="flex-1 bg-transparent px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none disabled:opacity-50"
+        />
+        <button onClick={() => send(input)} disabled={loading || !input.trim()}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold text-black transition-all hover:brightness-110 disabled:opacity-40">
+          {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
         </button>
       </div>
     </div>

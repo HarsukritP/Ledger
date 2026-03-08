@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Audio } from "expo-av";
+import { useTheme } from "../../lib/theme";
 
 interface BriefingPlayerProps {
   audioUrl?: string;
@@ -14,6 +15,7 @@ export function BriefingPlayer({
   previewText,
   duration = "0:42",
 }: BriefingPlayerProps) {
+  const { colors } = useTheme();
   const [playing, setPlaying] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
 
@@ -51,34 +53,41 @@ export function BriefingPlayer({
   }, [audioUrl, playing]);
 
   return (
-    <View className="overflow-hidden rounded-2xl border border-border bg-surface p-5">
+    <View
+      style={{
+        overflow: "hidden",
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        padding: 20,
+        shadowColor: colors.cardShadow,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 1,
+        shadowRadius: 3,
+      }}
+    >
       <View
-        className="absolute inset-0 opacity-5"
-        style={{ backgroundColor: "#D4A853" }}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.gold, opacity: 0.05 }}
       />
       <View className="flex-row items-center gap-4">
         <Pressable
           onPress={toggle}
-          className="h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold"
+          style={{
+            height: 48, width: 48,
+            alignItems: "center", justifyContent: "center",
+            borderRadius: 24, backgroundColor: colors.gold,
+          }}
         >
-          <Feather
-            name={playing ? "pause" : "play"}
-            size={20}
-            color="#000"
-          />
+          <Feather name={playing ? "pause" : "play"} size={20} color="#000" />
         </Pressable>
         <View className="flex-1 min-w-0">
           <View className="flex-row items-center gap-2">
-            <Feather name="volume-2" size={14} color="#71717A" />
-            <Text className="text-xs font-medium text-text-muted">
-              Weekly Briefing
-            </Text>
-            <Text className="text-xs text-text-muted">{duration}</Text>
+            <Feather name="volume-2" size={14} color={colors.textMuted} />
+            <Text style={{ fontSize: 12, fontWeight: "500", color: colors.textMuted }}>Weekly Briefing</Text>
+            <Text style={{ fontSize: 12, color: colors.textMuted }}>{duration}</Text>
           </View>
-          <Text
-            className="mt-1 text-sm text-text-secondary"
-            numberOfLines={2}
-          >
+          <Text style={{ marginTop: 4, fontSize: 14, color: colors.textSecondary }} numberOfLines={2}>
             {previewText}
           </Text>
         </View>
@@ -88,8 +97,7 @@ export function BriefingPlayer({
           {Array.from({ length: 20 }).map((_, i) => (
             <View
               key={i}
-              className="w-1 rounded-full bg-gold/40"
-              style={{ height: 4 + ((i * 7) % 16) }}
+              style={{ width: 4, borderRadius: 2, backgroundColor: colors.gold + "66", height: 4 + ((i * 7) % 16) }}
             />
           ))}
         </View>

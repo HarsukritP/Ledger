@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Text } from "react-native";
+import { Text, type StyleProp, type TextStyle } from "react-native";
 
 interface MoneyTextProps {
   value: number;
   animated?: boolean;
   showSign?: boolean;
   className?: string;
+  style?: StyleProp<TextStyle>;
   duration?: number;
 }
 
@@ -14,6 +15,7 @@ export function MoneyText({
   animated = false,
   showSign = false,
   className,
+  style,
   duration = 1200,
 }: MoneyTextProps) {
   const [display, setDisplay] = useState(animated ? 0 : value);
@@ -57,7 +59,7 @@ export function MoneyText({
         : "text-gold";
 
   return (
-    <Text className={`font-mono font-medium ${colorClass} ${className ?? ""}`}>
+    <Text className={`font-mono font-medium ${colorClass} ${className ?? ""}`} style={style}>
       {prefix}${formatted}
     </Text>
   );

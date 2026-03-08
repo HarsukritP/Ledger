@@ -38,23 +38,14 @@ export function HomePage() {
         }
         setWeekAhead(
           (data.week_ahead || []).map((e: any) => ({
-            id: e.id,
-            date: e.date,
-            name: e.name,
-            amount: e.amount,
-            type: e.type,
-            category: e.category,
+            id: e.id, date: e.date, name: e.name,
+            amount: e.amount, type: e.type, category: e.category,
           }))
         );
         setActions(
           (data.actions || []).map((a: any) => ({
-            id: a.id,
-            agent: a.agent,
-            type: a.type,
-            title: a.title,
-            description: a.description,
-            amount: a.amount,
-            actions: a.actions || [],
+            id: a.id, agent: a.agent, type: a.type, title: a.title,
+            description: a.description, amount: a.amount, actions: a.actions || [],
           }))
         );
       })
@@ -76,11 +67,11 @@ export function HomePage() {
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-danger/20 bg-danger/5 p-6 text-center">
+      <div className="card p-6 text-center">
         <p className="text-sm text-danger">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-3 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black"
+          className="mt-3 rounded-full bg-gold px-5 py-2 text-xs font-semibold text-black"
         >
           Retry
         </button>
@@ -102,10 +93,7 @@ export function HomePage() {
         </h1>
         <p className="text-sm text-text-muted">
           {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            year: "numeric",
+            weekday: "long", month: "long", day: "numeric", year: "numeric",
           })}
         </p>
       </motion.div>
@@ -118,12 +106,7 @@ export function HomePage() {
           className="grid grid-cols-3 gap-3"
         >
           <MetricCard label="Balance" value={health.balance} sub="checking" color="gold" />
-          <MetricCard
-            label="Spent This Month"
-            value={-health.spentThisMonth}
-            sub={`of $${health.budgetLimit.toLocaleString()} avg`}
-            color="danger"
-          />
+          <MetricCard label="Spent This Month" value={-health.spentThisMonth} sub={`of $${health.budgetLimit.toLocaleString()} avg`} color="danger" />
           <MetricCard label="Saved" value={health.saved} sub="this month" color="income" />
         </motion.div>
       )}
@@ -133,7 +116,7 @@ export function HomePage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-2xl border border-border bg-surface p-5"
+          className="card p-5"
         >
           <div className="mb-4 flex items-center gap-2">
             <h2 className="text-sm font-semibold text-text-primary">Your Week Ahead</h2>
@@ -149,11 +132,7 @@ export function HomePage() {
                     </span>
                     <span className="text-sm text-text-primary">{event.name}</span>
                   </div>
-                  <MoneyText
-                    value={event.type === "income" ? event.amount : -event.amount}
-                    showSign
-                    className="text-sm"
-                  />
+                  <MoneyText value={event.type === "income" ? event.amount : -event.amount} showSign className="text-sm" />
                 </div>
               ))}
               {predictedLow < 500 && lowEvent && (
@@ -187,20 +166,19 @@ export function HomePage() {
               />
             ))
           ) : (
-            <div className="rounded-2xl border border-border bg-surface p-5 text-center">
+            <div className="card p-5 text-center">
               <p className="text-sm text-text-muted">No pending actions. Your finances look good.</p>
             </div>
           )}
         </motion.div>
       </div>
 
-      {/* Spending by Category */}
       {categories.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="rounded-2xl border border-border bg-surface p-5"
+          className="card p-5"
         >
           <h2 className="mb-3 text-sm font-semibold text-text-primary">This Month's Spending</h2>
           <div className="space-y-2">
@@ -214,10 +192,7 @@ export function HomePage() {
                   </span>
                   <div className="flex-1">
                     <div className="h-1.5 rounded-full bg-border">
-                      <div
-                        className="h-full rounded-full bg-gold"
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                      />
+                      <div className="h-full rounded-full bg-gold" style={{ width: `${Math.min(pct, 100)}%` }} />
                     </div>
                   </div>
                   <span className="w-16 text-right font-mono text-xs text-text-muted">
@@ -234,12 +209,12 @@ export function HomePage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="rounded-2xl border border-border bg-surface p-5"
+        className="card p-5"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-gold" />
-            <span className="text-sm font-medium text-text-primary">Weekly Briefing</span>
+            <span className="text-sm font-semibold text-text-primary">Weekly Briefing</span>
             <AgentBadge agent="pulse" />
           </div>
           {!briefingText && (
@@ -256,7 +231,7 @@ export function HomePage() {
                 }
               }}
               disabled={briefingLoading}
-              className="flex items-center gap-1.5 rounded-full bg-gold px-3 py-1 text-xs font-medium text-black transition-colors hover:bg-gold/90 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-full bg-gold px-3 py-1.5 text-xs font-semibold text-black transition-all hover:brightness-110 disabled:opacity-50"
             >
               {briefingLoading ? <><Loader2 size={12} className="animate-spin" /> Generating...</> : "Generate"}
             </button>
@@ -283,18 +258,12 @@ const COLOR_CLASSES = {
 } as const;
 
 function MetricCard({
-  label,
-  value,
-  sub,
-  color,
+  label, value, sub, color,
 }: {
-  label: string;
-  value: number;
-  sub: string;
-  color: "gold" | "danger" | "income";
+  label: string; value: number; sub: string; color: "gold" | "danger" | "income";
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4">
+    <div className="card p-4">
       <p className="text-xs text-text-muted">{label}</p>
       <MoneyText value={value} animated className={COLOR_CLASSES[color]} />
       <p className="mt-1 text-xs text-text-secondary">{sub}</p>

@@ -1,30 +1,140 @@
 @import "tailwindcss";
 
+/* ── Light mode (default) ─────────────────────────────── */
+:root {
+  --color-bg: #F7F7FA;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #F0F0F4;
+  --color-surface-hover: #E6E6EC;
+  --color-border: #E0E0E6;
+  --color-border-subtle: #EBEBF0;
+  --color-text-primary: #111118;
+  --color-text-secondary: #6B6B76;
+  --color-text-muted: #9C9CA6;
+  --color-overlay: rgba(0, 0, 0, 0.4);
+  --color-card-shadow: rgba(0, 0, 0, 0.06);
+  --color-card-shadow-hover: rgba(0, 0, 0, 0.10);
+  --color-glass-bg: rgba(255, 255, 255, 0.7);
+  --color-glass-border: rgba(255, 255, 255, 0.5);
+  --color-noise-opacity: 0.03;
+  --color-chart-grid: #E0E0E6;
+  --color-chart-text: #9C9CA6;
+}
+
+/* ── Dark mode ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-bg: #0A0A0C;
+  --color-surface: #141418;
+  --color-surface-raised: #1C1C22;
+  --color-surface-hover: #242430;
+  --color-border: #2A2A35;
+  --color-border-subtle: #1E1E26;
+  --color-text-primary: #F5F5F7;
+  --color-text-secondary: #94949C;
+  --color-text-muted: #5C5C66;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-card-shadow: rgba(0, 0, 0, 0.2);
+  --color-card-shadow-hover: rgba(0, 0, 0, 0.35);
+  --color-glass-bg: rgba(20, 20, 24, 0.7);
+  --color-glass-border: rgba(42, 42, 53, 0.5);
+  --color-noise-opacity: 0.02;
+  --color-chart-grid: #2A2A35;
+  --color-chart-text: #5C5C66;
+}
+
+/* ── Tailwind v4 theme bindings ────────────────────────── */
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
-  --color-base: #09090B;
-  --color-surface: #111114;
-  --color-surface-raised: #1A1A22;
-  --color-border: #27272A;
-  --color-border-subtle: #1E1E24;
-  --color-text-primary: #FAFAFA;
-  --color-text-secondary: #A1A1AA;
-  --color-text-muted: #71717A;
+  --color-base: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-overlay: var(--color-overlay);
+  --color-card-shadow: var(--color-card-shadow);
+  --color-card-shadow-hover: var(--color-card-shadow-hover);
+  --color-glass-bg: var(--color-glass-bg);
+  --color-glass-border: var(--color-glass-border);
+
+  /* Brand accent (Audit quadrant) */
   --color-gold: #D4A853;
   --color-gold-dim: #D4A85320;
-  --color-income: #34D399;
-  --color-warning: #F59E0B;
+
+  /* Agent accents from logo quadrants */
+  --color-pulse: #3B82F6;
+  --color-north-star: #22C55E;
+  --color-sentinel: #F97316;
+
+  /* Semantic */
+  --color-income: #22C55E;
+  --color-warning: #F97316;
   --color-danger: #EF4444;
-  --color-info: #60A5FA;
+  --color-info: #3B82F6;
 }
 
+/* ── Base styles ───────────────────────────────────────── */
 body {
   margin: 0;
-  background-color: var(--color-base);
+  background-color: var(--color-bg);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Premium card utility ──────────────────────────────── */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px var(--color-card-shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-hover:hover {
+  box-shadow: 0 4px 12px var(--color-card-shadow-hover);
+  transform: translateY(-1px);
+}
+
+/* ── Glass effect utility ──────────────────────────────── */
+.glass {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-glass-border);
+}
+
+/* ── Subtle noise background ───────────────────────────── */
+.noise-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--color-noise-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ── Scrollbar refinement ──────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
 }

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
+import { ThemeProvider } from "./lib/theme";
 import { AppLayout } from "./components/layout/AppLayout";
 import { HomePage } from "./pages/HomePage";
 import { CashflowPage } from "./pages/CashflowPage";
@@ -34,21 +35,23 @@ function App() {
   useAuthToken();
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/welcome" element={<LandingPage />} />
-        <Route path="/callback" element={<CallbackPage />} />
-        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
-        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/cashflow" element={<CashflowPage />} />
-          <Route path="/expenses" element={<ExpensesPage />} />
-          <Route path="/goals" element={<GoalsPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/welcome" element={<LandingPage />} />
+          <Route path="/callback" element={<CallbackPage />} />
+          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+          <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/cashflow" element={<CashflowPage />} />
+            <Route path="/expenses" element={<ExpensesPage />} />
+            <Route path="/goals" element={<GoalsPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

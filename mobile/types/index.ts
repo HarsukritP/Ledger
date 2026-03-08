@@ -13,8 +13,8 @@ export const AGENTS: Record<AgentName, AgentInfo> = {
     name: "pulse",
     displayName: "Pulse",
     description: "Watches your cash flow and warns you before things get tight",
-    color: "#60A5FA",
-    bgColor: "#60A5FA15",
+    color: "#3B82F6",
+    bgColor: "#3B82F615",
   },
   audit: {
     name: "audit",
@@ -27,15 +27,15 @@ export const AGENTS: Record<AgentName, AgentInfo> = {
     name: "north-star",
     displayName: "North Star",
     description: "Keeps your goals realistic and on track",
-    color: "#34D399",
-    bgColor: "#34D39915",
+    color: "#22C55E",
+    bgColor: "#22C55E15",
   },
   sentinel: {
     name: "sentinel",
     displayName: "Sentinel",
     description: "Catches weird charges and spending drift early",
-    color: "#F59E0B",
-    bgColor: "#F59E0B15",
+    color: "#F97316",
+    bgColor: "#F9731615",
   },
 };
 

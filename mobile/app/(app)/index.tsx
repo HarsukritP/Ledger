@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../../lib/theme";
 import { useAuth0 } from "../../lib/use-auth";
 import { MoneyText } from "../../components/finance/MoneyText";
 import { AgentBadge } from "../../components/finance/AgentBadge";
@@ -20,6 +21,7 @@ import { api } from "../../lib/api";
 import type { ActionItem, HealthMetrics, ForecastEvent } from "../../types";
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
   const { user } = useAuth0();
   const firstName =
     (user?.given_name as string | undefined) ||
@@ -86,10 +88,10 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-base">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
         <View className="flex-1 items-center justify-center gap-3">
-          <ActivityIndicator size="large" color="#D4A853" />
-          <Text className="text-sm text-text-muted">
+          <ActivityIndicator size="large" color={colors.gold} />
+          <Text style={{ fontSize: 14, color: colors.textMuted }}>
             Loading your dashboard...
           </Text>
         </View>
@@ -99,15 +101,30 @@ export default function HomeScreen() {
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-base px-4">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16 }}>
         <View className="flex-1 items-center justify-center">
-          <View className="rounded-2xl border border-danger/20 bg-danger/5 p-6 w-full items-center">
-            <Text className="text-sm text-danger text-center mb-3">{error}</Text>
+          <View
+            style={{
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.danger + "33",
+              backgroundColor: colors.danger + "0D",
+              padding: 24,
+              width: "100%",
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ fontSize: 14, color: colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text>
             <Pressable
               onPress={() => loadData()}
-              className="rounded-full bg-gold px-5 py-2"
+              style={{
+                borderRadius: 9999,
+                backgroundColor: colors.gold,
+                paddingHorizontal: 20,
+                paddingVertical: 8,
+              }}
             >
-              <Text className="text-xs font-medium text-black">Retry</Text>
+              <Text style={{ fontSize: 12, fontWeight: "500", color: "#000000" }}>Retry</Text>
             </Pressable>
           </View>
         </View>
@@ -116,7 +133,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-base">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, gap: 24 }}
@@ -124,7 +141,7 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => loadData(true)}
-            tintColor="#D4A853"
+            tintColor={colors.gold}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -132,10 +149,10 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
           <View style={{ flex: 1 }}>
-            <Text className="text-2xl font-bold tracking-tight text-text-primary">
+            <Text style={{ fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: colors.textPrimary }}>
               {getGreeting()}, {firstName}
             </Text>
-            <Text className="text-sm text-text-muted mt-0.5">
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 2 }}>
               {new Date().toLocaleDateString("en-US", {
                 weekday: "long",
                 month: "long",
@@ -152,13 +169,13 @@ export default function HomeScreen() {
               padding: 8,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "#27272A",
-              backgroundColor: "#111114",
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
             }}
           >
             {refreshing
-              ? <ActivityIndicator size={16} color="#D4A853" />
-              : <Feather name="refresh-cw" size={16} color="#71717A" />
+              ? <ActivityIndicator size={16} color={colors.gold} />
+              : <Feather name="refresh-cw" size={16} color={colors.textMuted} />
             }
           </TouchableOpacity>
         </View>
@@ -188,9 +205,17 @@ export default function HomeScreen() {
         )}
 
         {/* Week Ahead */}
-        <View className="rounded-2xl border border-border bg-surface p-4">
+        <View
+          style={{
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+            padding: 16,
+          }}
+        >
           <View className="flex-row items-center gap-2 mb-3">
-            <Text className="text-sm font-semibold text-text-primary">
+            <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textPrimary }}>
               Your Week Ahead
             </Text>
             <AgentBadge agent="pulse" />
@@ -203,14 +228,14 @@ export default function HomeScreen() {
                   className="flex-row items-center justify-between"
                 >
                   <View className="flex-row items-center gap-3 flex-1">
-                    <Text className="w-10 text-xs text-text-muted">
+                    <Text style={{ width: 40, fontSize: 12, color: colors.textMuted }}>
                       {new Date(event.date + "T12:00:00").toLocaleDateString(
                         "en-US",
                         { weekday: "short" }
                       )}
                     </Text>
                     <Text
-                      className="text-sm text-text-primary flex-1"
+                      style={{ fontSize: 14, color: colors.textPrimary, flex: 1 }}
                       numberOfLines={1}
                     >
                       {event.name}
@@ -226,15 +251,23 @@ export default function HomeScreen() {
                 </View>
               ))}
               {predictedLow < 500 && (
-                <View className="rounded-xl border border-warning/20 bg-warning/5 p-3">
-                  <Text className="text-xs text-warning">
+                <View
+                  style={{
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: colors.warning + "33",
+                    backgroundColor: colors.warning + "0D",
+                    padding: 12,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: colors.warning }}>
                     Balance could dip to ${Math.round(predictedLow).toLocaleString()}
                   </Text>
                 </View>
               )}
             </View>
           ) : (
-            <Text className="text-sm text-text-muted">
+            <Text style={{ fontSize: 14, color: colors.textMuted }}>
               No upcoming events detected yet. Sync transactions to see forecasts.
             </Text>
           )}
@@ -242,7 +275,7 @@ export default function HomeScreen() {
 
         {/* Action Queue */}
         <View>
-          <Text className="text-sm font-semibold text-text-primary mb-3">
+          <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textPrimary, marginBottom: 12 }}>
             Action Queue
           </Text>
           {actions.length > 0 ? (
@@ -263,8 +296,17 @@ export default function HomeScreen() {
               ))}
             </View>
           ) : (
-            <View className="rounded-2xl border border-border bg-surface p-5 items-center">
-              <Text className="text-sm text-text-muted">
+            <View
+              style={{
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                padding: 20,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 14, color: colors.textMuted }}>
                 No pending actions. Your finances look good.
               </Text>
             </View>
@@ -296,11 +338,21 @@ function MetricCard({
   sub: string;
   color: "gold" | "danger" | "income";
 }) {
+  const { colors } = useTheme();
   return (
-    <View className="flex-1 rounded-2xl border border-border bg-surface p-3">
-      <Text className="text-[10px] text-text-muted">{label}</Text>
+    <View
+      style={{
+        flex: 1,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        padding: 12,
+      }}
+    >
+      <Text style={{ fontSize: 10, color: colors.textMuted }}>{label}</Text>
       <MoneyText value={value} animated className={`mt-1 text-base text-${color}`} />
-      <Text className="mt-0.5 text-[10px] text-text-secondary" numberOfLines={1}>
+      <Text style={{ marginTop: 2, fontSize: 10, color: colors.textSecondary }} numberOfLines={1}>
         {sub}
       </Text>
     </View>

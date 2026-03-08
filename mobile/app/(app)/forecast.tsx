@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../../lib/theme";
 import { AgentBadge } from "../../components/finance/AgentBadge";
 import { MoneyText } from "../../components/finance/MoneyText";
 import { CashFlowChart } from "../../components/finance/CashFlowChart";
@@ -31,6 +32,7 @@ const RANGES = [
 ] as const;
 
 export default function CashFlowScreen() {
+  const { colors } = useTheme();
   const [data, setData] = useState<CashflowData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,8 +82,8 @@ export default function CashFlowScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-base items-center justify-center gap-3">
-        <ActivityIndicator size="large" color="#D4A853" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} className="items-center justify-center gap-3">
+        <ActivityIndicator size="large" color={colors.gold} />
         <Text className="text-sm text-text-muted">Loading cashflow...</Text>
       </SafeAreaView>
     );
@@ -89,7 +91,7 @@ export default function CashFlowScreen() {
 
   if (error || !data) {
     return (
-      <SafeAreaView className="flex-1 bg-base px-4 items-center justify-center">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} className="px-4 items-center justify-center">
         <View className="rounded-2xl border border-danger/20 bg-danger/5 p-6 w-full items-center">
           <Text className="text-sm text-danger text-center mb-3">
             {error || "Failed to load cashflow"}
@@ -110,12 +112,12 @@ export default function CashFlowScreen() {
     : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-base">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, gap: 24 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => loadData(true)} tintColor="#D4A853" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => loadData(true)} tintColor={colors.gold} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -144,14 +146,14 @@ export default function CashFlowScreen() {
               onPress={() => setRange(r.days)}
               className="rounded-full px-4 py-1.5"
               style={{
-                backgroundColor: range === r.days ? "#D4A853" : "transparent",
+                backgroundColor: range === r.days ? colors.gold : "transparent",
                 borderWidth: range === r.days ? 0 : 1,
-                borderColor: "#27272A",
+                borderColor: colors.border,
               }}
             >
               <Text
                 className="text-xs font-medium"
-                style={{ color: range === r.days ? "#000" : "#A1A1AA" }}
+                style={{ color: range === r.days ? "#000" : colors.textSecondary }}
               >
                 {r.label}
               </Text>
@@ -182,8 +184,8 @@ export default function CashFlowScreen() {
                         key={event.id}
                         className="flex-row items-center justify-between rounded-xl border px-4 py-3"
                         style={{
-                          borderColor: isSavings ? "#3B82F620" : "#27272A",
-                          backgroundColor: isSavings ? "#3B82F608" : "#111114",
+                          borderColor: isSavings ? "#3B82F620" : colors.border,
+                          backgroundColor: isSavings ? "#3B82F608" : colors.surface,
                         }}
                       >
                         <View className="flex-row items-center gap-3 flex-1">
@@ -195,7 +197,7 @@ export default function CashFlowScreen() {
                           </Text>
                           <Text
                             className="text-sm flex-1"
-                            style={{ color: isSavings ? "#93C5FD" : "#FAFAFA" }}
+                            style={{ color: isSavings ? "#93C5FD" : colors.textPrimary }}
                             numberOfLines={1}
                           >
                             {event.name}
@@ -203,11 +205,11 @@ export default function CashFlowScreen() {
                           {event.category && (
                             <View
                               className="rounded-full px-2 py-0.5"
-                              style={{ backgroundColor: isSavings ? "#3B82F615" : "#1A1A22" }}
+                              style={{ backgroundColor: isSavings ? "#3B82F615" : colors.surfaceRaised }}
                             >
                               <Text
                                 className="text-[10px]"
-                                style={{ color: isSavings ? "#93C5FD" : "#71717A" }}
+                                style={{ color: isSavings ? "#93C5FD" : colors.textMuted }}
                               >
                                 {event.category}
                               </Text>
@@ -217,7 +219,7 @@ export default function CashFlowScreen() {
                         <Text
                           className="font-mono text-sm ml-2"
                           style={{
-                            color: isSavings ? "#60A5FA" : isIncome ? "#34D399" : "#EF4444",
+                            color: isSavings ? colors.pulse : isIncome ? colors.income : colors.danger,
                           }}
                         >
                           {isIncome ? "+" : "-"}$
@@ -246,7 +248,7 @@ export default function CashFlowScreen() {
                         <View
                           key={event.id}
                           className="flex-row items-center justify-between rounded-xl border px-4 py-2.5"
-                          style={{ borderColor: "#27272A22", backgroundColor: "#111114", opacity: 0.7 }}
+                          style={{ borderColor: colors.border, backgroundColor: colors.surface, opacity: 0.7 }}
                         >
                           <View className="flex-row items-center gap-3 flex-1">
                             <Text className="w-14 text-xs text-text-muted">
@@ -261,7 +263,7 @@ export default function CashFlowScreen() {
                           </View>
                           <Text
                             className="font-mono text-sm ml-2"
-                            style={{ color: isIncome ? "#34D39999" : "#EF444499" }}
+                            style={{ color: isIncome ? `${colors.income}99` : `${colors.danger}99` }}
                           >
                             {isIncome ? "+" : "-"}$
                             {Math.abs(event.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -275,7 +277,7 @@ export default function CashFlowScreen() {
 
             {/* Pulse recommendation */}
             {data.predictedLow < data.dangerThreshold && (
-              <View className="rounded-2xl border border-border bg-surface p-4">
+              <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
                 <View className="flex-row items-center gap-2 mb-2">
                   <AgentBadge agent="pulse" />
                   <Text className="text-sm font-medium text-text-primary">Pulse Recommends</Text>
@@ -289,7 +291,7 @@ export default function CashFlowScreen() {
             )}
           </>
         ) : (
-          <View className="rounded-2xl border border-border bg-surface p-8 items-center">
+          <View className="rounded-2xl border p-8 items-center" style={{ borderColor: colors.border, backgroundColor: colors.surface }}>
             <Text className="text-sm text-text-muted text-center">
               No cashflow data yet. Sync your transactions to see your cash flow history and forecast.
             </Text>
