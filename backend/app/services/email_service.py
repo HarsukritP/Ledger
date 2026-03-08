@@ -175,11 +175,13 @@ class EmailService:
 
     async def _scan_gmail(self, access_token: str) -> list[dict]:
         """Search Gmail for billing/receipt emails, then use LLM to extract charges."""
+        import asyncio
+
         query = " OR ".join(f'"{kw}"' for kw in BILLING_KEYWORDS)
         query = f"({query}) newer_than:180d"
 
         try:
-            async with httpx.AsyncClient(timeout=30) as http:
+            async with httpx.AsyncClient(timeout=60) as http:
                 resp = await http.get(
                     f"{GMAIL_API_BASE}/users/me/messages",
                     params={"q": query, "maxResults": 200},
@@ -191,19 +193,28 @@ class EmailService:
                 messages = resp.json().get("messages", [])
                 logger.info(f"[EMAIL] Found {len(messages)} candidate emails")
 
-                emails = []
-                for msg_ref in messages[:150]:
-                    email_data = await self._fetch_email(http, access_token, msg_ref["id"])
-                    if email_data:
-                        emails.append(email_data)
+                to_fetch = messages[:150]
+                sem = asyncio.Semaphore(10)
+
+                async def _fetch_with_sem(msg_id: str):
+                    async with sem:
+                        return await self._fetch_email(http, access_token, msg_id)
+
+                tasks = [_fetch_with_sem(m["id"]) for m in to_fetch]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                emails = [r for r in results if isinstance(r, dict)]
 
                 logger.info(f"[EMAIL] Fetched {len(emails)} emails, sending to LLM in batches")
 
                 all_charges: list[dict] = []
                 for i in range(0, len(emails), BATCH_SIZE):
                     batch = emails[i:i + BATCH_SIZE]
-                    charges = await self._extract_with_llm(batch)
-                    all_charges.extend(charges)
+                    try:
+                        charges = await self._extract_with_llm(batch)
+                        all_charges.extend(charges)
+                        logger.info(f"[EMAIL] Batch {i // BATCH_SIZE + 1}: extracted {len(charges)} charges")
+                    except Exception as e:
+                        logger.warning(f"[EMAIL] Batch {i // BATCH_SIZE + 1} failed: {e}")
 
                 seen: dict[str, dict] = {}
                 for c in all_charges:

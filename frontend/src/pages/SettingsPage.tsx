@@ -287,6 +287,8 @@ function AccountsTab() {
 function SandboxTab() {
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<any>(null);
+  const [clearing, setClearing] = useState(false);
+  const [clearResult, setClearResult] = useState<any>(null);
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -301,48 +303,71 @@ function SandboxTab() {
     }
   };
 
+  const handleClear = async () => {
+    setClearing(true);
+    setClearResult(null);
+    try {
+      const result = await api.plaid.clearData();
+      setClearResult(result);
+    } catch (err: any) {
+      setClearResult({ error: err.message });
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-text-primary">Seed Demo Transactions</h3>
-      <p className="text-xs text-text-muted">
-        Generate 8 weeks of realistic transaction data: biweekly paychecks, rent, subscriptions, dining, shopping, and more.
-        This replaces any existing transactions and populates the dashboard, forecasts, and subscription views.
-      </p>
-      <button
-        onClick={handleSeed}
-        disabled={seeding}
-        className="flex items-center gap-2 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black disabled:opacity-50"
-      >
-        {seeding ? (
-          <>
-            <Loader2 size={14} className="animate-spin" />
-            Seeding...
-          </>
-        ) : (
-          <>
-            <Database size={14} />
-            Seed 8 Weeks of Data
-          </>
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-text-primary">Seed Demo Transactions</h3>
+        <p className="text-xs text-text-muted">
+          Generate 8 weeks of realistic transaction data. This replaces existing transactions.
+        </p>
+        <button
+          onClick={handleSeed}
+          disabled={seeding}
+          className="flex items-center gap-2 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black disabled:opacity-50"
+        >
+          {seeding ? <><Loader2 size={14} className="animate-spin" /> Seeding...</> : <><Database size={14} /> Seed 8 Weeks of Data</>}
+        </button>
+        {seedResult && (
+          <div className="rounded-xl border border-border bg-base p-3">
+            {seedResult.error ? (
+              <p className="text-xs text-danger">{seedResult.error}</p>
+            ) : (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-income" />
+                <p className="text-xs text-text-secondary">
+                  Created {seedResult.transactions_created} transactions and {seedResult.recurring_charges_created} recurring charges
+                </p>
+              </div>
+            )}
+          </div>
         )}
-      </button>
-      {seedResult && (
-        <div className="rounded-xl border border-border bg-base p-3">
-          {seedResult.error ? (
-            <p className="text-xs text-danger">{seedResult.error}</p>
-          ) : (
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={14} className="text-income" />
-              <p className="text-xs text-text-secondary">
-                Created {seedResult.transactions_created} transactions and {seedResult.recurring_charges_created} recurring charges
-                ({seedResult.date_range?.start} to {seedResult.date_range?.end})
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-      <p className="text-xs text-text-muted/60">
-        In production, transactions sync automatically from linked banks via Plaid webhooks.
-      </p>
+      </div>
+
+      <div className="space-y-3 border-t border-border pt-4">
+        <h3 className="text-sm font-semibold text-danger">Clear All Transaction Data</h3>
+        <p className="text-xs text-text-muted">
+          Remove all transactions, recurring charges, and action items. Your linked accounts, goals, and email connections are kept.
+        </p>
+        <button
+          onClick={handleClear}
+          disabled={clearing}
+          className="flex items-center gap-2 rounded-full border border-danger/30 px-5 py-2 text-xs font-medium text-danger disabled:opacity-50"
+        >
+          {clearing ? <><Loader2 size={14} className="animate-spin" /> Clearing...</> : <><Trash2 size={14} /> Clear All Data</>}
+        </button>
+        {clearResult && (
+          <div className="rounded-xl border border-border bg-base p-3">
+            {clearResult.error ? (
+              <p className="text-xs text-danger">{clearResult.error}</p>
+            ) : (
+              <p className="text-xs text-income">Data cleared successfully.</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

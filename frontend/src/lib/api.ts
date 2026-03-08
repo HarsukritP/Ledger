@@ -119,6 +119,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ weeks, clear_existing: true }),
       }),
+    clearData: () => request<any>("/plaid/sandbox/clear", { method: "POST" }),
   },
 
   email: {
