@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Loader2, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Loader2, Sparkles, TrendingUp, Receipt, Target, Shield } from "lucide-react";
 import { MoneyText } from "../components/finance/MoneyText";
 import { AgentBadge } from "../components/finance/AgentBadge";
 import { ActionCard } from "../components/finance/ActionCard";
 import { getGreeting } from "../lib/utils";
 import { api } from "../lib/api";
+import { AGENTS } from "../types";
 import type { ActionItem, HealthMetrics, ForecastEvent } from "../types";
 
 export function HomePage() {
@@ -97,6 +99,8 @@ export function HomePage() {
           })}
         </p>
       </motion.div>
+
+      <AgentTeamSection />
 
       {health && (
         <motion.div
@@ -248,6 +252,82 @@ export function HomePage() {
         </p>
       </motion.div>
     </div>
+  );
+}
+
+const AGENT_CARDS = [
+  {
+    key: "pulse" as const,
+    icon: TrendingUp,
+    to: "/cashflow",
+    tagline: "Cash-flow forecasting",
+  },
+  {
+    key: "audit" as const,
+    icon: Receipt,
+    to: "/expenses",
+    tagline: "Subscription & expense tracking",
+  },
+  {
+    key: "north-star" as const,
+    icon: Target,
+    to: "/goals",
+    tagline: "Goal planning & feasibility",
+  },
+  {
+    key: "sentinel" as const,
+    icon: Shield,
+    to: "/chat",
+    tagline: "Anomaly detection & alerts",
+  },
+] as const;
+
+function AgentTeamSection() {
+  const navigate = useNavigate();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 }}
+    >
+      <h2 className="mb-3 text-sm font-semibold text-text-primary">Your Finance Team</h2>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {AGENT_CARDS.map((card, i) => {
+          const agent = AGENTS[card.key];
+          return (
+            <motion.button
+              key={card.key}
+              onClick={() => navigate(card.to)}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 + i * 0.05 }}
+              className="card card-hover group relative overflow-hidden p-4 text-left"
+            >
+              <div
+                className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                style={{ background: `linear-gradient(135deg, ${agent.color}08, ${agent.color}15)` }}
+              />
+              <div className="relative">
+                <div
+                  className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: agent.bgColor }}
+                >
+                  <card.icon size={18} style={{ color: agent.color }} />
+                </div>
+                <p className="text-sm font-semibold text-text-primary">{agent.displayName}</p>
+                <p className="mt-0.5 text-[11px] font-medium" style={{ color: agent.color }}>
+                  {card.tagline}
+                </p>
+                <p className="mt-1.5 text-xs leading-relaxed text-text-muted">
+                  {agent.description}
+                </p>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </motion.div>
   );
 }
 

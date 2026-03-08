@@ -64,9 +64,9 @@ export function Sidebar() {
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 overflow-hidden px-4">
           <img
-            src="/logo.png"
+            src="/icon_notext.png"
             alt="Ledger"
-            className="h-10 w-10 shrink-0 object-contain"
+            className="h-10 w-10 shrink-0 rounded-lg object-contain"
           />
           <AnimatePresence>
             {expanded && (
@@ -167,7 +167,7 @@ export function Sidebar() {
           >
             <div className="flex h-16 items-center justify-between px-4">
               <div className="flex items-center gap-3">
-                <img src="/logo.png" alt="Ledger" className="h-10 w-10 object-contain" />
+                <img src="/icon_notext.png" alt="Ledger" className="h-10 w-10 rounded-lg object-contain" />
                 <span className="text-lg font-bold tracking-tight text-text-primary">Ledger</span>
               </div>
               <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1 text-text-muted hover:text-text-secondary">
