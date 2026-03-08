@@ -232,17 +232,17 @@ export default function ChatScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ flexShrink: 0 }}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingVertical: 8 }}
+          style={{ flexShrink: 0, maxHeight: 36 }}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 6, paddingVertical: 4, alignItems: "center" }}
         >
           {SUGGESTIONS.map((s) => (
             <Pressable
               key={s}
               onPress={() => send(s)}
               disabled={loading}
-              style={{ borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, opacity: loading ? 0.4 : 1, borderColor: colors.border }}
+              style={{ borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, opacity: loading ? 0.4 : 1, borderColor: colors.border }}
             >
-              <Text style={{ fontSize: 12, color: colors.textSecondary }}>{s}</Text>
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>{s}</Text>
             </Pressable>
           ))}
         </ScrollView>
