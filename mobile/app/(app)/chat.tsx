@@ -126,19 +126,19 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1"
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* Header */}
-        <View className="flex-row items-start justify-between px-4 pt-2 pb-3">
-          <View>
-            <Text className="text-2xl font-bold tracking-tight" style={{ color: colors.textPrimary }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: colors.textPrimary }}>
               Talk to Ledger
             </Text>
-            <Text className="text-sm mt-0.5" style={{ color: colors.textMuted }}>
+            <Text style={{ fontSize: 13, marginTop: 2, color: colors.textMuted }}>
               Ask anything about your finances — your agents are listening
             </Text>
           </View>
@@ -146,15 +146,14 @@ export default function ChatScreen() {
             <Pressable
               onPress={clearChat}
               disabled={clearing}
-              className="flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 mt-1"
-              style={{ opacity: clearing ? 0.5 : 1, borderColor: colors.border }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, marginTop: 4, opacity: clearing ? 0.5 : 1, borderColor: colors.border }}
             >
               {clearing ? (
                 <ActivityIndicator size={12} color={colors.textMuted} />
               ) : (
                 <Feather name="trash-2" size={12} color={colors.textMuted} />
               )}
-              <Text className="text-xs" style={{ color: colors.textMuted }}>Clear</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>Clear</Text>
             </Pressable>
           )}
         </View>
@@ -162,15 +161,15 @@ export default function ChatScreen() {
         {/* Messages */}
         <ScrollView
           ref={scrollRef}
-          className="flex-1 px-4"
+          style={{ flex: 1, paddingHorizontal: 16 }}
           contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
         >
           {historyLoading && (
-            <View className="flex-row items-center justify-center gap-2 py-8">
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 32 }}>
               <ActivityIndicator size="small" color={colors.textMuted} />
-              <Text className="text-sm" style={{ color: colors.textMuted }}>
+              <Text style={{ fontSize: 14, color: colors.textMuted }}>
                 Loading conversation...
               </Text>
             </View>
@@ -179,44 +178,35 @@ export default function ChatScreen() {
           {messages.map((msg) => (
             <View
               key={msg.id}
-              className={
-                msg.role === "user" ? "items-end" : "items-start"
-              }
+              style={{ alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}
             >
               {msg.role === "error" ? (
                 <View
-                  className="max-w-[85%] rounded-2xl border px-4 py-3"
-                  style={{ borderColor: `${colors.danger}4D`, backgroundColor: `${colors.danger}1A` }}
+                  style={{ maxWidth: "85%", borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12, borderColor: `${colors.danger}4D`, backgroundColor: `${colors.danger}1A` }}
                 >
-                  <View className="flex-row items-center gap-2 mb-1">
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <Feather name="alert-triangle" size={14} color={colors.danger} />
-                    <Text className="text-xs font-medium" style={{ color: colors.danger }}>
-                      Error
-                    </Text>
+                    <Text style={{ fontSize: 12, fontWeight: "500", color: colors.danger }}>Error</Text>
                   </View>
-                  <Text className="font-mono text-xs leading-relaxed" style={{ color: `${colors.danger}CC` }}>
+                  <Text style={{ fontSize: 12, lineHeight: 18, color: `${colors.danger}CC` }}>
                     {msg.text}
                   </Text>
                 </View>
               ) : (
                 <View
-                  className={
+                  style={[
+                    { borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12 },
                     msg.role === "user"
-                      ? "max-w-[75%] rounded-2xl px-4 py-3"
-                      : "max-w-[85%] rounded-2xl border px-4 py-3"
-                  }
-                  style={
-                    msg.role === "user"
-                      ? { backgroundColor: colors.surfaceRaised }
-                      : { borderColor: colors.border, backgroundColor: colors.surface }
-                  }
+                      ? { maxWidth: "75%", backgroundColor: colors.surfaceRaised }
+                      : { maxWidth: "85%", borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+                  ]}
                 >
                   {msg.agent && (
-                    <View className="mb-2">
+                    <View style={{ marginBottom: 8 }}>
                       <AgentBadge agent={msg.agent} />
                     </View>
                   )}
-                  <Text className="text-sm leading-relaxed" style={{ color: colors.textPrimary }}>
+                  <Text style={{ fontSize: 14, lineHeight: 20, color: colors.textPrimary }}>
                     {msg.text}
                   </Text>
                 </View>
@@ -225,13 +215,12 @@ export default function ChatScreen() {
           ))}
 
           {loading && (
-            <View className="items-start">
+            <View style={{ alignItems: "flex-start" }}>
               <View
-                className="flex-row items-center gap-3 rounded-2xl border px-4 py-3"
-                style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12, borderColor: colors.border, backgroundColor: colors.surface }}
               >
                 <ActivityIndicator size="small" color={colors.gold} />
-                <Text className="text-sm" style={{ color: colors.textMuted }}>
+                <Text style={{ fontSize: 14, color: colors.textMuted }}>
                   Agents are thinking...
                 </Text>
               </View>
@@ -243,7 +232,7 @@ export default function ChatScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="flex-none"
+          style={{ flexShrink: 0 }}
           contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingVertical: 8 }}
         >
           {SUGGESTIONS.map((s) => (
@@ -251,19 +240,17 @@ export default function ChatScreen() {
               key={s}
               onPress={() => send(s)}
               disabled={loading}
-              className="rounded-full border px-3 py-1.5"
-              style={{ opacity: loading ? 0.4 : 1, borderColor: colors.border }}
+              style={{ borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, opacity: loading ? 0.4 : 1, borderColor: colors.border }}
             >
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>{s}</Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>{s}</Text>
             </Pressable>
           ))}
         </ScrollView>
 
         {/* Input bar */}
-        <View className="flex-row items-center gap-2 px-4 pb-4 pt-1">
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingBottom: 8, paddingTop: 4 }}>
           <View
-            className="flex-1 rounded-full border px-4 py-2.5"
-            style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+            style={{ flex: 1, borderRadius: 999, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 10, borderColor: colors.border, backgroundColor: colors.surface }}
           >
             <TextInput
               value={input}
@@ -273,16 +260,14 @@ export default function ChatScreen() {
               placeholderTextColor={colors.textMuted}
               returnKeyType="send"
               editable={!loading}
-              className="text-sm"
-              style={{ maxHeight: 80, color: colors.textPrimary }}
+              style={{ maxHeight: 80, fontSize: 14, color: colors.textPrimary }}
               multiline
             />
           </View>
           <Pressable
             onPress={() => send(input)}
             disabled={loading || !input.trim()}
-            className="h-10 w-10 shrink-0 items-center justify-center rounded-full"
-            style={{ opacity: loading || !input.trim() ? 0.4 : 1, backgroundColor: colors.gold }}
+            style={{ height: 40, width: 40, alignItems: "center", justifyContent: "center", borderRadius: 999, flexShrink: 0, opacity: loading || !input.trim() ? 0.4 : 1, backgroundColor: colors.gold }}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#000" />
