@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Link2, Shield, Bell, Info, LogOut } from "lucide-react";
+import { Link2, Shield, Bell, Info, LogOut, Database, Loader2, CheckCircle2, RefreshCw } from "lucide-react";
 import { cn } from "../lib/utils";
+import { api } from "../lib/api";
 
 const TABS = [
   { id: "accounts", label: "Linked Accounts", icon: Link2 },
   { id: "preferences", label: "Preferences", icon: Bell },
+  { id: "sandbox", label: "Sandbox Tools", icon: Database },
   { id: "privacy", label: "Privacy & Data", icon: Shield },
   { id: "about", label: "About", icon: Info },
 ] as const;
@@ -54,27 +56,7 @@ export function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="rounded-2xl border border-border bg-surface p-6"
       >
-        {tab === "accounts" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl border border-border bg-base p-4">
-              <div>
-                <p className="text-sm font-medium text-text-primary">First Platypus Bank</p>
-                <p className="text-xs text-text-muted">Checking &middot; Last synced 2 min ago</p>
-              </div>
-              <div className="flex gap-2">
-                <button className="rounded-full border border-border px-3 py-1 text-xs text-text-secondary hover:bg-surface-raised">
-                  Sync Now
-                </button>
-                <button className="rounded-full border border-danger/30 px-3 py-1 text-xs text-danger">
-                  Unlink
-                </button>
-              </div>
-            </div>
-            <button className="w-full rounded-xl border border-dashed border-border py-4 text-sm text-text-muted hover:border-gold/30 hover:text-gold">
-              + Link Another Account
-            </button>
-          </div>
-        )}
+        {tab === "accounts" && <AccountsTab />}
 
         {tab === "preferences" && (
           <div className="space-y-6">
@@ -83,6 +65,8 @@ export function SettingsPage() {
             <PreferenceRow label="Agent Strictness" options={["Gentle", "Balanced", "Strict"]} defaultValue="Balanced" />
           </div>
         )}
+
+        {tab === "sandbox" && <SandboxTab />}
 
         {tab === "privacy" && (
           <div className="space-y-4">
@@ -145,6 +129,188 @@ export function SettingsPage() {
           </div>
         )}
       </motion.div>
+    </div>
+  );
+}
+
+function AccountsTab() {
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  useState(() => {
+    api.plaid
+      .accounts()
+      .then((data: any) => setAccounts(data.accounts || []))
+      .catch(() => setAccounts([]))
+      .finally(() => setLoading(false));
+  });
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const result = await api.plaid.sync();
+      setSyncResult(`Synced: ${result.new_transactions} new, ${result.modified} modified`);
+    } catch (err: any) {
+      setSyncResult(`Sync failed: ${err.message}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8 text-text-muted">
+        <Loader2 size={18} className="animate-spin" />
+        <span className="ml-2 text-sm">Loading accounts...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {accounts.length > 0 ? (
+        accounts.map((acct, i) => (
+          <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-base p-4">
+            <div>
+              <p className="text-sm font-medium text-text-primary">
+                {acct.institution_name || "Bank"} — {acct.name}
+              </p>
+              <p className="text-xs text-text-muted">
+                {acct.type} &middot; ${acct.balance_current?.toLocaleString() ?? "—"}
+                {acct.stale && " (cached)"}
+              </p>
+            </div>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-text-secondary hover:bg-surface-raised disabled:opacity-50"
+            >
+              {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              Sync
+            </button>
+          </div>
+        ))
+      ) : (
+        <p className="py-4 text-center text-sm text-text-muted">No linked accounts. Go through onboarding to link a bank.</p>
+      )}
+      {syncResult && (
+        <p className="text-xs text-text-secondary">{syncResult}</p>
+      )}
+    </div>
+  );
+}
+
+function SandboxTab() {
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<any>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
+
+  const handleSeed = async () => {
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const result = await api.plaid.seed(8);
+      setSeedResult(result);
+    } catch (err: any) {
+      setSeedResult({ error: err.message });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const result = await api.plaid.sync();
+      setSyncResult(result);
+    } catch (err: any) {
+      setSyncResult({ error: err.message });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-semibold text-text-primary">Seed Demo Transactions</h3>
+        <p className="mt-1 text-xs text-text-muted">
+          Generate 8 weeks of realistic transaction data: biweekly paychecks, rent, subscriptions, dining, shopping, and more.
+          This replaces any existing demo transactions.
+        </p>
+        <button
+          onClick={handleSeed}
+          disabled={seeding}
+          className="mt-3 flex items-center gap-2 rounded-full bg-gold px-5 py-2 text-xs font-medium text-black disabled:opacity-50"
+        >
+          {seeding ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Seeding...
+            </>
+          ) : (
+            <>
+              <Database size={14} />
+              Seed 8 Weeks of Data
+            </>
+          )}
+        </button>
+        {seedResult && (
+          <div className="mt-3 rounded-xl border border-border bg-base p-3">
+            {seedResult.error ? (
+              <p className="text-xs text-danger">{seedResult.error}</p>
+            ) : (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-income" />
+                <p className="text-xs text-text-secondary">
+                  Created {seedResult.transactions_created} transactions and {seedResult.recurring_charges_created} recurring charges
+                  ({seedResult.date_range?.start} to {seedResult.date_range?.end})
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-border pt-6">
+        <h3 className="text-sm font-semibold text-text-primary">Sync from Plaid</h3>
+        <p className="mt-1 text-xs text-text-muted">
+          Pull the latest transactions from your linked Plaid Sandbox accounts.
+        </p>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          className="mt-3 flex items-center gap-2 rounded-full border border-border px-5 py-2 text-xs font-medium text-text-secondary hover:bg-surface-raised disabled:opacity-50"
+        >
+          {syncing ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Syncing...
+            </>
+          ) : (
+            <>
+              <RefreshCw size={14} />
+              Sync Transactions from Plaid
+            </>
+          )}
+        </button>
+        {syncResult && (
+          <div className="mt-3 rounded-xl border border-border bg-base p-3">
+            {syncResult.error ? (
+              <p className="text-xs text-danger">{syncResult.error}</p>
+            ) : (
+              <p className="text-xs text-text-secondary">
+                Synced: {syncResult.new_transactions} new, {syncResult.modified} modified, {syncResult.removed} removed
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

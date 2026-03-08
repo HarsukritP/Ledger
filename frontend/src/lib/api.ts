@@ -101,6 +101,11 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ institution_id: institutionId }),
       }),
+    seed: (weeks = 8) =>
+      request<any>("/plaid/sandbox/seed", {
+        method: "POST",
+        body: JSON.stringify({ weeks, clear_existing: true }),
+      }),
   },
 
   settings: {
