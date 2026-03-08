@@ -57,7 +57,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="subscriptions"
         options={{
-          title: "Subs",
+          title: "Subscriptions",
           tabBarIcon: ({ color, size }) => (
             <Feather name="credit-card" size={size} color={color} />
           ),

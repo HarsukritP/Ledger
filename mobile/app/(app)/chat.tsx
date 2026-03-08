@@ -23,10 +23,10 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  "How is my cashflow looking?",
+  "How is my cashflow looking this week?",
   "Review my subscriptions",
   "Are my goals on track?",
-  "Any unusual spending?",
+  "Sentinel, anything unusual in my spending?",
 ];
 
 function mapAgent(backend: string | undefined): AgentName | undefined {

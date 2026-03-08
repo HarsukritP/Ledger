@@ -14,10 +14,10 @@ import { clearToken } from "../../hooks/useAuthToken";
 import { api } from "../../lib/api";
 
 const TABS = [
-  { id: "accounts", label: "Accounts", icon: "link" as const },
+  { id: "accounts", label: "Linked Accounts", icon: "link" as const },
   { id: "preferences", label: "Preferences", icon: "sliders" as const },
-  { id: "sandbox", label: "Sandbox", icon: "database" as const },
-  { id: "privacy", label: "Privacy", icon: "shield" as const },
+  { id: "sandbox", label: "Sandbox Tools", icon: "database" as const },
+  { id: "privacy", label: "Privacy & Data", icon: "shield" as const },
   { id: "about", label: "About", icon: "info" as const },
 ] as const;
 

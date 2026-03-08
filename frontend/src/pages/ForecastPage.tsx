@@ -26,11 +26,11 @@ export function ForecastPage() {
       .get()
       .then((raw: any) => {
         setData({
-          startBalance: raw.start_balance,
+          startBalance: raw.current_balance ?? raw.start_balance,
           dangerThreshold: raw.danger_threshold,
           predictedLow: raw.predicted_low,
           predictedLowDate: raw.predicted_low_date,
-          events: (raw.events || []).map((e: any) => ({
+          events: (raw.forecast_events || raw.events || []).map((e: any) => ({
             id: e.id,
             date: e.date,
             name: e.name,
