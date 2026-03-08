@@ -105,7 +105,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [resolved, setTheme]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && typeof Appearance.setColorScheme === "function") {
       Appearance.setColorScheme(resolved);
     }
   }, [resolved, loaded]);
