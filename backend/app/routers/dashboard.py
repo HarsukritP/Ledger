@@ -49,6 +49,20 @@ async def get_briefing(user=Depends(get_current_user)):
             for a in actions_raw
         ]
 
+        # Low-balance push — fire when balance is positive but under $500
+        try:
+            balance = float(health.get("balance", 0))
+            if 0 < balance < 500:
+                from app.services.push_service import send_to_user
+                send_to_user(
+                    user_db_id,
+                    title="⚠️ Low balance alert",
+                    body=f"Your checking balance is ${balance:,.2f} — below $500.",
+                    data={"type": "low_balance", "balance": balance},
+                )
+        except Exception:
+            pass
+
         return {
             "health": health,
             "week_ahead": week_ahead,

@@ -6,7 +6,9 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth0 } from "../../lib/use-auth";
 import { MoneyText } from "../../components/finance/MoneyText";
@@ -128,18 +130,37 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View>
-          <Text className="text-2xl font-bold tracking-tight text-text-primary">
-            {getGreeting()}, {firstName}
-          </Text>
-          <Text className="text-sm text-text-muted mt-0.5">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <View style={{ flex: 1 }}>
+            <Text className="text-2xl font-bold tracking-tight text-text-primary">
+              {getGreeting()}, {firstName}
+            </Text>
+            <Text className="text-sm text-text-muted mt-0.5">
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => loadData(true)}
+            disabled={refreshing}
+            style={{
+              marginTop: 4,
+              padding: 8,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "#27272A",
+              backgroundColor: "#111114",
+            }}
+          >
+            {refreshing
+              ? <ActivityIndicator size={16} color="#D4A853" />
+              : <Feather name="refresh-cw" size={16} color="#71717A" />
+            }
+          </TouchableOpacity>
         </View>
 
         {/* Health Metrics */}
